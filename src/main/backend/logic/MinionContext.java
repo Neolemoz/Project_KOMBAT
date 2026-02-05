@@ -27,7 +27,8 @@ public class MinionContext {
         if (name.equals("row")) return minion.getRow();
         if (name.equals("col")) return minion.getCol();
         if (name.equals("budget")) return minion.getOwner().getBudgetLong();
-        if (name.equals("int")) return (long) (minion.getOwner().getBudget() * calculateInterestRate()); // Interest rate โดยประมาณ
+        if (name.equals("int"))
+            return (long) (minion.getOwner().getBudget() * calculateInterestRate()); // Interest rate โดยประมาณ
         if (name.equals("max_budget")) return 10000; // หรือค่าตาม Config
         if (name.equals("safe")) return 0; // ต้องมี Logic safe (ถ้าโจทย์กำหนด)
         if (name.equals("random")) return new Random().nextInt(1000);
@@ -73,3 +74,5 @@ public class MinionContext {
         // สูตร: r = b * log10(m) * ln(t)
         // เพื่อความง่ายในการ getVariable 'int' อาจจะคืนค่าเป็น % จำนวนเต็ม
         return 0; // หรือ
+    }
+}
