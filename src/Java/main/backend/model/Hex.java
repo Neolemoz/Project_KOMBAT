@@ -1,8 +1,10 @@
+import main.backend.model.Minion;
+
 public class Hex {
     private final int row;
     private final int col;
     private boolean isSpawnable = false; // สถานะว่าเป็นช่องที่วางยูนิตได้ไหม
-    private Minion occupant = null;
+    private main.backend.model.Minion occupant = null;
 
     public Hex(int row, int col) {
         this.row = row;

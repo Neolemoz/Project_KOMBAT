@@ -1,11 +1,12 @@
-package main.backend.service;
+package src.Java.main.backend.service;
 
-import main.backend.logic.*;
-import main.backend.model.*;
+import main.backend.logic.ConfigLoader;
+import main.backend.model.GameState;
 import org.springframework.stereotype.Service;
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
+import
 
 @Service
 public class GameService {
@@ -68,5 +69,20 @@ public class GameService {
         Player p = gameState.getPlayer(playerId);
         double cost = config.get("hex_purchase_cost"); // หรือค่าคงที่ตามโจทย์
         return gameState.buyHex(p, row, col, cost);
+    }
+
+    public void setMinionScript(int playerId, int minionIndex, String scriptCode) {
+        // 1. สร้าง Tokenizer (แยกคำ) - *คุณอาจต้องเขียนคลาส Tokenizer เพิ่ม หรือทำง่ายๆ แบบ split*
+        List<String> tokens = java.util.Arrays.asList(scriptCode.replace("(", " ( ").replace(")", " ) ").replace("{", " { ").replace("}", " } ").trim().split("\\s+"));
+
+        // 2. สร้าง Parser และ Parse
+        Parser p = new Parser(tokens);
+        Node ast = p.parse();
+
+        // 3. ยัดใส่ Minion
+        Player player = gameState.getPlayer(playerId);
+        if (player.getMinions().size() > minionIndex) {
+            player.getMinions().get(minionIndex).setStrategyAST(ast);
+        }
     }
 }

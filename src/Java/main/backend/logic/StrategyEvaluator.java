@@ -1,9 +1,12 @@
-package main.backend.logic; // ตรวจสอบชื่อ Package
+package src.Java.main.backend.logic; // ตรวจสอบชื่อ Package
 
 import main.backend.model.GameState;
 import main.backend.model.Hex;
 import main.backend.model.Minion;
 import main.backend.model.Player;
+import main.backend.logic.MinionContext;
+import main.backend.logic.Node;
+import main.backend.logic.BlockNode;
 
 public class StrategyEvaluator {
     private boolean isDone = false; // ตัวแปรสำหรับจบเทิร์น (เมื่อเจอคำสั่ง done หรือเงินหมด)
@@ -108,31 +111,13 @@ public class StrategyEvaluator {
 
     // --- ส่วนคำนวณนิพจน์ (Expression) ---
 
-    private long evaluateExpression(Node expr, MinionContext ctx) {
-        // ต้องตรวจสอบว่าเป็น Node ประเภทไหน (ตัวเลข, ตัวแปร, หรือ Operator)
-        // เนื่องจาก Node อาจเป็น Abstract Class คุณต้อง Cast ตามชนิดจริงที่ Parser สร้างมา
-        // ตัวอย่าง Logic คร่าวๆ (ขึ้นอยู่กับโครงสร้าง Node ของคุณ):
-
-        /* if (expr instanceof NumberNode) return ((NumberNode) expr).getValue();
-        if (expr instanceof VariableNode) return ctx.getVariable(((VariableNode) expr).getName());
-        if (expr instanceof BinaryOpNode) {
-            long left = evaluateExpression(((BinaryOpNode) expr).getLeft(), ctx);
-            long right = evaluateExpression(((BinaryOpNode) expr).getRight(), ctx);
-            String op = ((BinaryOpNode) expr).getOperator();
-            switch (op) {
-                case "+": return left + right;
-                case "-": return left - right;
-                case "*": return left * right;
-                case "/": return right == 0 ? 0 : left / right; // กันหาร 0
-                case "%": return right == 0 ? 0 : left % right;
-                case "^": return (long) Math.pow(left, right);
-                default: return 0;
-            }
+    private long evaluateExpression(ExpressionNode expr, MinionContext ctx) {
+        try {
+            // เรียกใช้ evaluate ของ Node ลูก (เช่น BinaryOpNode, NumberNode)
+            return expr.evaluate(ctx);
+        } catch (ArithmeticException e) {
+            this.isDone = true; // หารด้วย 0 ให้จบเทิร์น
+            return 0;
         }
-        */
-
-        // หาก Node มีเมธอด evaluate() อยู่แล้ว ให้เรียกใช้ได้เลย
-        // return expr.evaluate(ctx);
-        return 0; // แก้เป็น Logic จริงของคุณ
     }
 }
