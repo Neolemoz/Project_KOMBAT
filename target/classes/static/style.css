@@ -18,57 +18,69 @@ body {
     border-radius: 8px;
     margin-bottom: 20px;
     width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-/* กระดาน Grid 8x8 */
+/* --- จัดตารางหกเหลี่ยมแบบรังผึ้ง --- */
 .hex-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 60px); /* 8 คอลัมน์ */
-    grid-template-rows: repeat(8, 60px);    /* 8 แถว */
-    gap: 5px;
-    background: #7f8c8d;
-    padding: 10px;
-    border-radius: 10px;
+    width: 600px; /* ต้องกว้างพอให้วางได้ 8 ช่อง */
     margin: 0 auto;
-    width: fit-content;
+    padding-top: 20px;
+    padding-left: 20px;
+    display: flex;
+    flex-wrap: wrap;
 }
 
 .hex-cell {
     width: 60px;
-    height: 60px;
-    background-color: #ecf0f1;
-    border: 2px solid #bdc3c7;
+    height: 68px; /* ปรับความสูงให้สมส่วน */
+    background-color: #95a5a6;
+    margin-right: 2px;
+    margin-bottom: -15px; /* ดึงแถวล่างขึ้นมาซ้อนให้ขอบชนกัน */
+
+    /* ตัดเป็นรูปหกเหลี่ยม */
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+
     display: flex;
     align-items: center;
     justify-content: center;
-    color: black;
-    font-size: 10px;
     cursor: pointer;
     position: relative;
+    font-size: 10px;
+    color: rgba(0,0,0,0.5);
 }
 
-/* สีพื้นที่ของแต่ละฝ่าย */
-.hex-cell.p1-owned { background-color: #3498db; } /* สีฟ้า P1 */
-.hex-cell.p2-owned { background-color: #e74c3c; } /* สีแดง P2 */
-.hex-cell.spawnable { border: 2px dashed #f1c40f; } /* ช่องที่ซื้อได้ */
+/* --- สูตรสับหว่าง (Staggered Grid) --- */
+/* ทุกๆ 16 ช่อง (2 แถว), ตัวที่ 9 (ตัวแรกของแถวคู่) ให้ดันไปทางขวา */
+.hex-cell:nth-child(16n + 9) {
+    margin-left: 33px; /* ดันไปครึ่งช่อง (Half Width + Gap) */
+}
+
+/* สีพื้นที่ */
+.hex-cell.p1-owned { background-color: #3498db; }
+.hex-cell.p2-owned { background-color: #e74c3c; }
+.hex-cell.spawnable { background-color: #f1c40f; opacity: 0.6; }
 
 /* ตัวมินิยอน */
 .minion {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
-    border: 2px solid white;
+    background: white;
+    color: black;
+    border: 3px solid transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    color: white;
+    z-index: 10;
 }
-.minion.p1 { background-color: #2980b9; }
-.minion.p2 { background-color: #c0392b; }
+.minion.p1 { border-color: #2980b9; color: #2980b9; }
+.minion.p2 { border-color: #c0392b; color: #c0392b; }
 
 .btn-end {
-    margin-top: 20px;
+    margin-top: 40px;
     padding: 10px 30px;
     font-size: 18px;
     background-color: #e67e22;
@@ -77,4 +89,3 @@ body {
     border-radius: 5px;
     cursor: pointer;
 }
-.btn-end:hover { background-color: #d35400; }

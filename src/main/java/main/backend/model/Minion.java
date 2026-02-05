@@ -1,8 +1,11 @@
 package main.backend.model; // ตรวจสอบชื่อ Package
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import main.backend.logic.Node; // ต้อง Import Node ของ AST ที่ได้จาก Parser
 
 public class Minion {
+
+    @JsonIgnore
     private Player owner;
     private int row;
     private int col;
@@ -35,6 +38,7 @@ public class Minion {
 
     // --- Getters & Setters ---
 
+    @JsonIgnore
     public Player getOwner() { return owner; }
     public void setOwner(Player owner) { this.owner = owner; }
 
