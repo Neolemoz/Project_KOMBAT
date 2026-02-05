@@ -1,27 +1,39 @@
-import java.util.*;
+package main.backend.model; // ตรวจสอบชื่อ Package ให้ตรงกับโฟลเดอร์ของคุณ
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Player {
-    private double budget;
     private int id;
-    private List<Minion> minions = new ArrayList<>();
+    private double budget; // ใช้ double เพื่อความแม่นยำของดอกเบี้ย
+    private List<Minion> minions; // รายชื่อมินิยอนในสังกัด
+    private Map<String, Long> globalVars; // ตัวแปร Global (ตัวพิมพ์ใหญ่) แชร์กันทั้งทีม
 
     public Player(int id, double initBudget) {
         this.id = id;
         this.budget = initBudget;
+        this.minions = new ArrayList<>();
+        this.globalVars = new HashMap<>();
     }
+
+    // --- ส่วนการจัดการ Budget และ ดอกเบี้ย ---
 
     public void updateBudget(double turnBudget, double baseRate, int turnCount, double maxBudget) {
         // 1. เพิ่มงบรายเทิร์น
-        this.budget += turnBudget; [cite: 72]
+        this.budget += turnBudget;
 
-        // 2. คำนวณดอกเบี้ย
-        if (this.budget >= 1) { [cite: 110]
-            double r = baseRate * Math.log10(this.budget) * Math.log(turnCount); [cite: 111]
-            this.budget += (this.budget * r / 100.0); [cite: 109]
+        // 2. คำนวณดอกเบี้ย: r = b * log10(m) * ln(t)
+        if (this.budget >= 1) {
+            double r = baseRate * Math.log10(this.budget) * Math.log(turnCount);
+            this.budget += (this.budget * r / 100.0);
         }
 
-        // 3. ตรวจสอบงบสูงสุด
-        if (this.budget > maxBudget) this.budget = maxBudget; [cite: 73]
+        // 3. จำกัดงบสูงสุด (Cap Budget)
+        if (this.budget > maxBudget) {
+            this.budget = maxBudget;
+        }
     }
 
     public boolean spend(double amount) {
@@ -33,6 +45,31 @@ public class Player {
     }
 
     public long getBudgetLong() {
-        return (long) this.budget;
+        return (long) this.budget; // Helper สำหรับ Evaluator ที่ต้องการค่า int/long
     }
+
+    // --- ส่วนการจัดการ Minion ---
+
+    public void addMinion(Minion m) {
+        minions.add(m);
+        m.setOwner(this); // กำหนดเจ้าของให้มินิยอน
+    }
+
+    public void removeMinion(Minion m) {
+        minions.remove(m);
+    }
+
+    public List<Minion> getMinions() {
+        return minions;
+    }
+
+    // --- ส่วนการจัดการ Global Variables ---
+
+    public Map<String, Long> getGlobalVars() {
+        return globalVars;
+    }
+
+    // --- Getters ทั่วไป ---
+    public int getId() { return id; }
+    public double getBudget() { return budget; }
 }
