@@ -31,6 +31,10 @@ public class MinionContext {
         if (name.equals("max_budget")) return 10000; // หรือค่าตาม Config
         if (name.equals("safe")) return 0; // ต้องมี Logic safe (ถ้าโจทย์กำหนด)
         if (name.equals("random")) return new Random().nextInt(1000);
+        if (name.startsWith("nearby_")) {
+            String direction = name.substring(7); // ตัดคำว่า "nearby_" ออก เหลือแค่ทิศ (เช่น "up")
+            return calculateNearby(direction);
+        }
 
         // 2. Info Expressions (Sensors)
         if (name.equals("ally")) return calculateClosest(false);
