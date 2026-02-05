@@ -32,5 +32,7 @@ public class Player {
         return false;
     }
 
-    public double getBudget() { return budget; }
+    public long getBudgetLong() {
+        return (long) this.budget;
+    }
 }
