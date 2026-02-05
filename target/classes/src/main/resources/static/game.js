@@ -72,9 +72,33 @@ function buyHex(playerId, row, col) {
 function endTurn() {
     fetch(`${API_URL}/end-turn`, { method: "POST" })
         .then(() => {
-            log("Turn Ended. AI calculating...");
-            updateBoard(); // โหลดสถานะใหม่หลังจากบอทเดิน
+            log("Turn Ended.");
+            updateBoard();
+
+            // --- เพิ่มตรงนี้: ให้เด้งหน้าต่างรีเซ็ตทุกครั้งที่จบเทิร์น (ตามที่คุณขอ) ---
+            // หรือถ้าจะให้เด้งเฉพาะตอน Error ก็ลบบรรทัดนี้ออก แล้วให้ catch ของ updateBoard ทำงานแทน
+            showModal();
+        })
+        .catch(err => showModal()); // ถ้า Backend พัง ก็เด้งหน้าต่าง
+}
+
+// --- ฟังก์ชัน: รีเซ็ตเกม ---
+function resetGame() {
+    fetch(`${API_URL}/reset`, { method: "POST" })
+        .then(() => {
+            closeModal();
+            log("Game Restarted!");
+            updateBoard();
         });
+}
+
+// --- ฟังก์ชันจัดการ Popup ---
+function showModal() {
+    document.getElementById("restart-modal").classList.remove("hidden");
+}
+
+function closeModal() {
+    document.getElementById("restart-modal").classList.add("hidden");
 }
 
 function updateStatus(players) {
@@ -88,3 +112,4 @@ function log(msg) {
     const logPanel = document.getElementById("game-log");
     logPanel.innerText = msg;
 }
+

@@ -32,4 +32,10 @@ public class GameController {
         gameService.endTurn();
         return "TURN ENDED";
     }
+
+    @PostMapping("/reset")
+    public String resetGame() {
+        gameService.init(); // เรียกฟังก์ชัน init เพื่อล้างกระดานใหม่
+        return "GAME RESET";
+    }
 }

@@ -17,9 +17,19 @@
 
     <div class="controls">
         <button onclick="endTurn()" class="btn-end">End Turn</button>
+        <button onclick="resetGame()" class="btn-reset">Restart</button>
     </div>
 
     <div id="game-log" class="log-panel">Game Started...</div>
+</div>
+
+<div id="restart-modal" class="modal hidden">
+    <div class="modal-content">
+        <h2>🔁 End of Turn / Game Over</h2>
+        <p>The board needs to be refreshed.</p>
+        <button onclick="resetGame()" class="btn-modal-restart">Start New Game</button>
+        <button onclick="closeModal()" class="btn-modal-close">View Board</button>
+    </div>
 </div>
 
 <script src="game.js"></script>

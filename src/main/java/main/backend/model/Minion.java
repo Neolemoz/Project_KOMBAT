@@ -1,7 +1,7 @@
-package main.backend.model; // ตรวจสอบชื่อ Package
+package main.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import main.backend.logic.Node; // ต้อง Import Node ของ AST ที่ได้จาก Parser
+import main.backend.logic.Node;
 
 public class Minion {
 
@@ -11,10 +11,11 @@ public class Minion {
     private int col;
     private int hp;
     private int maxHp;
-    private int defense; // Defense Factor ใช้ลด Damage
-    private Node strategyAST; // เก็บโครงสร้างคำสั่ง (Abstract Syntax Tree)
-    private String name; // ชื่อชนิดของ Minion (เช่น "Archer", "Tank")
+    private int defense;
+    private Node strategyAST;
+    private String name;
 
+    // Constructor หลัก (6 ตัวแปร)
     public Minion(Player owner, int row, int col, int maxHp, int defense, String name) {
         this.owner = owner;
         this.row = row;
@@ -25,8 +26,13 @@ public class Minion {
         this.name = name;
     }
 
-    // --- เมธอดจัดการสถานะ ---
+    // --- เพิ่ม Constructor นี้ (แก้ Error expected 6 but found 3) ---
+    public Minion(Player owner, int row, int col) {
+        // เรียก Constructor หลักโดยกำหนดค่าเริ่มต้นให้: HP=100, Def=0, Name="Minion"
+        this(owner, row, col, 100, 0, "Minion");
+    }
 
+    // --- เมธอดจัดการสถานะ ---
     public boolean isAlive() {
         return hp > 0;
     }
@@ -37,6 +43,12 @@ public class Minion {
     }
 
     // --- Getters & Setters ---
+
+    // เพิ่มเมธอดนี้เพื่อความสะดวก (GameState อาจจะเรียกใช้)
+    public void setPosition(int row, int col) {
+        this.row = row;
+        this.col = col;
+    }
 
     @JsonIgnore
     public Player getOwner() { return owner; }
