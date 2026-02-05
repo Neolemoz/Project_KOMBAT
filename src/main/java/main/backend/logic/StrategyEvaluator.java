@@ -1,15 +1,12 @@
-package src.Java.main.backend.logic; // ตรวจสอบชื่อ Package
+package main.backend.logic;
 
 import main.backend.model.GameState;
 import main.backend.model.Hex;
 import main.backend.model.Minion;
 import main.backend.model.Player;
-import main.backend.logic.MinionContext;
-import main.backend.logic.Node;
-import main.backend.logic.BlockNode;
 
 public class StrategyEvaluator {
-    private boolean isDone = false; // ตัวแปรสำหรับจบเทิร์น (เมื่อเจอคำสั่ง done หรือเงินหมด)
+    private boolean isDone = false; // ตัวแปรสำหรับจบเทิร์น (เมื่อเจอคำสั่ง done หรือเงินหมด หรือ error)
     private static final int MAX_LOOPS = 10000; // ป้องกัน Infinite Loop
 
     public void execute(Node node, MinionContext ctx) {
@@ -85,11 +82,10 @@ public class StrategyEvaluator {
                 if (targetHex != null && targetHex.getOccupant() != null) {
                     Minion target = targetHex.getOccupant();
 
-                    // สูตร Damage: max(0, h - max(1, x - d))
+                    // สูตร Damage: max(1, x - d)
                     long defense = target.getDefense();
-                    long damage = Math.max(0, expenditure - defense); // สูตรง่ายๆ หรือใช้สูตรเต็มตามโจทย์
-                    // ถ้าตามโจทย์เป๊ะ: damage = h - max(1, x - d) -> ลด HP ตามผลลัพธ์
                     long effectiveDamage = Math.max(1, expenditure - defense);
+
                     target.takeDamage((int) effectiveDamage);
 
                     if (!target.isAlive()) {
@@ -99,7 +95,7 @@ public class StrategyEvaluator {
                     }
                 }
             } else {
-                // เงินไม่พอ shoot ถือเป็น no-op (แต่ในบาง implementation อาจให้จบเทิร์นเลย)
+                // เงินไม่พอ shoot ถือเป็น no-op (ตามกฎ)
             }
         }
     }
@@ -116,7 +112,7 @@ public class StrategyEvaluator {
             // เรียกใช้ evaluate ของ Node ลูก (เช่น BinaryOpNode, NumberNode)
             return expr.evaluate(ctx);
         } catch (ArithmeticException e) {
-            this.isDone = true; // หารด้วย 0 ให้จบเทิร์น
+            this.isDone = true; // หารด้วย 0 ให้จบเทิร์นทันที
             return 0;
         }
     }

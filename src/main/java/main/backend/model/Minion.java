@@ -1,6 +1,5 @@
-package src.Java.main.backend.model; // ตรวจสอบชื่อ Package
+package main.backend.model; // ตรวจสอบชื่อ Package
 
-import main.backend.model.Player;
 import main.backend.logic.Node; // ต้อง Import Node ของ AST ที่ได้จาก Parser
 
 public class Minion {

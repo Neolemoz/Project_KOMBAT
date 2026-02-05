@@ -1,3 +1,5 @@
+package main.backend.model;
+
 import main.backend.model.Minion;
 
 public class Hex {

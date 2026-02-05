@@ -1,12 +1,12 @@
-package src.Java.main.backend.service;
+package main.backend.service;
 
-import main.backend.logic.ConfigLoader;
-import main.backend.model.GameState;
+import main.backend.logic.*;
+import main.backend.model.*;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
-import java.util.Map;
-import
+
+
 
 @Service
 public class GameService {
