@@ -1,0 +1,80 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #2c3e50;
+    color: white;
+    text-align: center;
+}
+
+.game-container {
+    display: inline-block;
+    margin-top: 20px;
+}
+
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    background: #34495e;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    width: 600px;
+}
+
+/* กระดาน Grid 8x8 */
+.hex-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 60px); /* 8 คอลัมน์ */
+    grid-template-rows: repeat(8, 60px);    /* 8 แถว */
+    gap: 5px;
+    background: #7f8c8d;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+.hex-cell {
+    width: 60px;
+    height: 60px;
+    background-color: #ecf0f1;
+    border: 2px solid #bdc3c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: black;
+    font-size: 10px;
+    cursor: pointer;
+    position: relative;
+}
+
+/* สีพื้นที่ของแต่ละฝ่าย */
+.hex-cell.p1-owned { background-color: #3498db; } /* สีฟ้า P1 */
+.hex-cell.p2-owned { background-color: #e74c3c; } /* สีแดง P2 */
+.hex-cell.spawnable { border: 2px dashed #f1c40f; } /* ช่องที่ซื้อได้ */
+
+/* ตัวมินิยอน */
+.minion {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+}
+.minion.p1 { background-color: #2980b9; }
+.minion.p2 { background-color: #c0392b; }
+
+.btn-end {
+    margin-top: 20px;
+    padding: 10px 30px;
+    font-size: 18px;
+    background-color: #e67e22;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.btn-end:hover { background-color: #d35400; }
