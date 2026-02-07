@@ -16,30 +16,39 @@ body {
     background: #34495e;
     padding: 15px;
     border-radius: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     width: 600px;
     margin-left: auto;
     margin-right: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
-/* --- จัดตารางหกเหลี่ยมแบบรังผึ้ง --- */
+/* --- ส่วนสำคัญที่ปรับปรุง --- */
 .hex-grid {
-    width: 600px; /* ต้องกว้างพอให้วางได้ 8 ช่อง */
+    /* คำนวณความกว้าง: (60px + 4px gap) * 8 ช่อง = 512px */
+    /* เผื่อพื้นที่ให้แถวคู่ที่เยื้องออกมาอีก 32px -> รวม 544px */
+    /* กำหนดค่า Width ให้เป๊ะ เพื่อบังคับให้มันตัดบรรทัดที่ตัวที่ 8 พอดี */
+    width: 550px;
+
     margin: 0 auto;
     padding-top: 20px;
-    padding-left: 20px;
+    padding-left: 15px; /* จัดกึ่งกลางให้สมดุล */
     display: flex;
     flex-wrap: wrap;
+    transform: scale(1.1); /* ขยายกระดานให้ใหญ่ขึ้นเล็กน้อย */
 }
 
 .hex-cell {
     width: 60px;
-    height: 68px; /* ปรับความสูงให้สมส่วน */
+    height: 68px; /* สัดส่วนที่สวยงามสำหรับ 6 เหลี่ยม */
     background-color: #95a5a6;
-    margin-right: 2px;
-    margin-bottom: -15px; /* ดึงแถวล่างขึ้นมาซ้อนให้ขอบชนกัน */
 
-    /* ตัดเป็นรูปหกเหลี่ยม */
+    /* ระยะห่าง */
+    margin-right: 2px;
+    margin-left: 2px;
+    margin-bottom: -16px; /* ดึงแถวล่างขึ้นมาซ้อนกัน (Overlap) */
+
+    /* ตัดขอบเป็น 6 เหลี่ยม */
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
 
     display: flex;
@@ -48,44 +57,126 @@ body {
     cursor: pointer;
     position: relative;
     font-size: 10px;
-    color: rgba(0,0,0,0.5);
+    color: rgba(0,0,0,0.3);
+    transition: all 0.2s;
 }
 
-/* --- สูตรสับหว่าง (Staggered Grid) --- */
-/* ทุกๆ 16 ช่อง (2 แถว), ตัวที่ 9 (ตัวแรกของแถวคู่) ให้ดันไปทางขวา */
+/* --- สูตรเยื้อง (Staggered Row) --- */
+/* แถวคู่ (ตัวที่ 9, 25, 41...) ให้ดันไปทางขวา */
+/* margin-left = ครึ่งหนึ่งของความกว้าง (30px) + gap (2px) = 32px */
 .hex-cell:nth-child(16n + 9) {
-    margin-left: 33px; /* ดันไปครึ่งช่อง (Half Width + Gap) */
+    margin-left: 34px;
 }
 
-/* สีพื้นที่ */
+/* เอฟเฟกต์ตอนชี้ */
+.hex-cell:hover {
+    background-color: #bdc3c7;
+    transform: scale(1.15);
+    z-index: 20;
+}
+
+/* สีพื้นที่เจ้าของ */
 .hex-cell.p1-owned { background-color: #3498db; }
 .hex-cell.p2-owned { background-color: #e74c3c; }
-.hex-cell.spawnable { background-color: #f1c40f; opacity: 0.6; }
+
+/* ช่องที่ซื้อได้ */
+.hex-cell.spawnable {
+    background-color: #f1c40f;
+    opacity: 0.8;
+}
 
 /* ตัวมินิยอน */
 .minion {
-    width: 35px;
-    height: 35px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: white;
     color: black;
-    border: 3px solid transparent;
+    border: 4px solid transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    font-size: 14px;
     z-index: 10;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
 .minion.p1 { border-color: #2980b9; color: #2980b9; }
 .minion.p2 { border-color: #c0392b; color: #c0392b; }
 
 .btn-end {
-    margin-top: 40px;
-    padding: 10px 30px;
-    font-size: 18px;
-    background-color: #e67e22;
+    margin-top: 50px;
+    padding: 12px 40px;
+    font-size: 20px;
+    background-color: #d35400;
     color: white;
     border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+.btn-end:hover { background-color: #e67e22; }
+/* ปุ่ม Reset เล็กๆ */
+.btn-reset {
+    margin-top: 50px;
+    margin-left: 10px;
+    padding: 12px 20px;
+    font-size: 16px;
+    background-color: #7f8c8d;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+}
+.btn-reset:hover { background-color: #95a5a6; }
+
+/* --- สไตล์ของ Popup Modal --- */
+.modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* พื้นหลังสีดำจางๆ */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none; /* ซ่อนไว้ถ้ายังไม่ใช้ */
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    color: black;
+    width: 300px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 { color: #e74c3c; margin-top: 0; }
+
+.btn-modal-restart {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
     border-radius: 5px;
     cursor: pointer;
+    margin: 5px;
+}
+.btn-modal-restart:hover { background-color: #2ecc71; }
+
+.btn-modal-close {
+    background-color: #95a5a6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
 }
