@@ -33,6 +33,7 @@ public class Parser {
             return parseBlock();
         } else {
             // เช็คว่าเป็น Assignment (x = 5) หรือ Action (move up)
+            // โดยดู Token ถัดไปว่าใช่เครื่องหมาย = หรือไม่
             if (pos + 1 < tokens.size() && tokens.get(pos + 1).equals("=")) {
                 return parseAssignment();
             } else {
@@ -41,14 +42,14 @@ public class Parser {
         }
     }
 
-    // --- Parsing Logic สำหรับโครงสร้างต่างๆ ---
+    // --- Parsing Logic สำหรับโครงสร้าง Control Flow ---
 
     private Node parseIf() {
         consume("if");
         consume("(");
         ExpressionNode condition = parseExpression();
         consume(")");
-        Node thenBlock = parseStatement(); // หรือ parseBlock() ก็ได้ถ้าบังคับใส่ {}
+        Node thenBlock = parseStatement();
         Node elseBlock = null;
         if (pos < tokens.size() && peek().equals("else")) {
             consume("else");
@@ -88,30 +89,43 @@ public class Parser {
         String direction = "up";   // default
         ExpressionNode expr = null; // สำหรับ shoot
 
-        // ถ้าไม่ใช่ done อาจจะมีทิศทาง
+        // ถ้าไม่ใช่ done อาจจะมีทิศทาง (เช่น move up)
         if (!action.equals("done") && pos < tokens.size() && !isReserved(peek())) {
-            // เช็คว่าเป็นทิศทางหรือไม่ (อย่างง่าย)
             String next = peek();
+            // เช็คว่าเป็นทิศทางหรือไม่
             if (next.matches("up|down|upleft|upright|downleft|downright")) {
                 direction = consume();
             }
         }
 
-        // ถ้าเป็น shoot ต้องรับค่าพลังงานด้วย (shoot up 100)
+        // ถ้าเป็น shoot ต้องรับค่าพลังงานด้วย (เช่น shoot up 100)
+        // ตาม Grammar: shoot Direction Expression
         if (action.equals("shoot")) {
-            // ถ้า token ถัดไปเป็นตัวเลขหรือตัวแปร
             expr = parseExpression();
         }
 
         return new ActionCommandNode(action, direction, expr);
     }
 
-    // --- Expression Parsing (อย่างง่าย: ไม่มีวงเล็บซ้อนในสมการเลข) ---
-    // ถ้าต้องการสมบูรณ์กว่านี้ต้องทำ Shunting-yard หรือ Recursive Descent แยก Level
+    // --- Expression Parsing Hierarchy (แก้ไขใหม่ตาม Spec) ---
+
+    // Level 1: Comparisons (>, <) - ความสำคัญต่ำสุด
     private ExpressionNode parseExpression() {
+        ExpressionNode left = parseAdditive();
+
+        while (pos < tokens.size() && (peek().equals(">") || peek().equals("<"))) {
+            String op = consume();
+            ExpressionNode right = parseAdditive();
+            left = new BinaryOpNode(left, op, right);
+        }
+        return left;
+    }
+
+    // Level 2: Addition/Subtraction (+, -)
+    private ExpressionNode parseAdditive() {
         ExpressionNode left = parseTerm();
 
-        while (pos < tokens.size() && (peek().equals("+") || peek().equals("-") || peek().equals("*") || peek().equals("/") || peek().equals("%") || peek().equals(">") || peek().equals("<"))) {
+        while (pos < tokens.size() && (peek().equals("+") || peek().equals("-"))) {
             String op = consume();
             ExpressionNode right = parseTerm();
             left = new BinaryOpNode(left, op, right);
@@ -119,10 +133,37 @@ public class Parser {
         return left;
     }
 
+    // Level 3: Multiplication/Division/Modulo (*, /, %)
     private ExpressionNode parseTerm() {
+        ExpressionNode left = parseFactor();
+
+        while (pos < tokens.size() && (peek().equals("*") || peek().equals("/") || peek().equals("%"))) {
+            String op = consume();
+            ExpressionNode right = parseFactor();
+            left = new BinaryOpNode(left, op, right);
+        }
+        return left;
+    }
+
+    // Level 4: Power (^) - ความสำคัญสูงสุดใน Operator ปกติ
+    // ทำงานแบบ Right-associative (ขวาไปซ้าย) เช่น 2^3^2 = 2^(3^2)
+    private ExpressionNode parseFactor() {
+        ExpressionNode left = parsePower();
+
+        if (pos < tokens.size() && peek().equals("^")) {
+            String op = consume();
+            ExpressionNode right = parseFactor(); // เรียกซ้ำ (Recursive) เพื่อให้ทำด้านขวาก่อน
+            return new BinaryOpNode(left, op, right);
+        }
+        return left;
+    }
+
+    // Level 5: Atomic Values (Numbers, Variables, Parentheses, InfoCommands)
+    // ตรงกับ Rule: Power -> <number> | <identifier> | (Expression) | InfoExpression
+    private ExpressionNode parsePower() {
         String t = peek();
 
-        // --- เพิ่มส่วนนี้สำหรับ InfoExpression ---
+        // จัดการ InfoExpression (ally, opponent, nearby)
         if (t.equals("ally")) {
             consume();
             return new InfoExpressionNode("ally", null);
@@ -134,19 +175,19 @@ public class Parser {
             String dir = consume(); // ต้องตามด้วยทิศทางเสมอ เช่น nearby up
             return new InfoExpressionNode("nearby", dir);
         }
-        // -------------------------------------
 
-        // Logic เดิม
+        // จัดการค่าทั่วไป
         t = consume();
         if (t.matches("\\d+")) {
             return new NumberNode(Long.parseLong(t));
         } else if (t.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
             return new VariableNode(t);
         } else if (t.equals("(")) { // รองรับวงเล็บ (Expression)
-            ExpressionNode node = parseExpression();
+            ExpressionNode node = parseExpression(); // กลับไปเรียก Level 1
             consume(")");
             return node;
         }
+
         throw new RuntimeException("Unexpected token: " + t);
     }
 
@@ -169,6 +210,8 @@ public class Parser {
     }
 
     private boolean isReserved(String t) {
+        // ใช้สำหรับเช็คว่าคำถัดไปเป็น command ใหม่หรือ control flow หรือไม่
+        // เพื่อแยกแยะใน parseAction ว่าจบคำสั่ง move/shoot หรือยัง
         return t.equals("if") || t.equals("else") || t.equals("while") || t.equals("}") || t.equals("done");
     }
 }

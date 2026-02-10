@@ -349,3 +349,15 @@ body {
     left: auto;
     top: auto;
 }
+
+/* สีพื้นที่ของ Player 1 (เช่น สีชมพู/แดงอ่อน) */
+.hex.owned-p1 {
+    background-color: rgba(255, 99, 71, 0.4) !important; /* Tomato color */
+    border: 2px solid red;
+}
+
+/* สีพื้นที่ของ Player 2 (เช่น สีฟ้าอ่อน) */
+.hex.owned-p2 {
+    background-color: rgba(65, 105, 225, 0.4) !important; /* Royal Blue */
+    border: 2px solid blue;
+}

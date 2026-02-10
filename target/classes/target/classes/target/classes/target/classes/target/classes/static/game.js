@@ -49,44 +49,38 @@ function updateBoard() {
 // ฟังก์ชันวาดกระดาน
 function renderGrid(board) {
     const grid = document.getElementById("hex-grid");
-    grid.innerHTML = ""; // เคลียร์ของเก่า
+    grid.innerHTML = "";
 
     for (let r = 1; r <= 8; r++) {
         for (let c = 1; c <= 8; c++) {
             const hex = board[r][c];
-            if (!hex) continue; // ข้ามถ้าไม่มีข้อมูล
+            if (!hex) continue;
 
             const cell = document.createElement("div");
             cell.className = "hex-cell";
             cell.title = `Row: ${r}, Col: ${c}`;
 
-            // --- ส่วนที่เพิ่มใหม่: เช็คว่าใครเป็นเจ้าของพื้นที่ (ไม่ต้องมี Minion ก็ขึ้นสี) ---
+            // --- 1. แก้ส่วนนี้: เช็คเจ้าของพื้นที่ (Owner) ---
             if (hex.owner) {
-                // เช็คว่า backend ส่งมาเป็น object (ที่มี .id) หรือตัวเลข id เพียวๆ
                 const ownerId = (typeof hex.owner === 'object') ? hex.owner.id : hex.owner;
-
-                if (ownerId === 1) {
-                    cell.classList.add("owned-p1"); // ใส่สี P1
-                } else if (ownerId === 2) {
-                    cell.classList.add("owned-p2"); // ใส่สี P2
-                }
+                // ใช้ชื่อ class ให้ตรงกับ style.css (.owned-p1)
+                if (ownerId === 1) cell.classList.add("owned-p1");
+                if (ownerId === 2) cell.classList.add("owned-p2");
             }
-            // ------------------------------------------------------------------
+            // -------------------------------------------
 
-            // วาด Minion (ถ้ามี)
+            // --- 2. ส่วนแสดง Minion ---
             if (hex.occupant) {
                 const m = hex.occupant;
                 const minionDiv = document.createElement("div");
+                // ตรงนี้ Minion ใช้ class แยก (p1, p2) ตาม style เดิม
                 minionDiv.className = `minion p${m.owner.id}`;
                 minionDiv.innerText = m.hp;
                 cell.appendChild(minionDiv);
-            }
-            // แสดงพื้นที่ที่ Spawn ได้ (ถ้ายังไม่ถูกซื้อ)
-            else if (hex.spawnable) {
+            } else if (hex.spawnable) {
                 cell.classList.add("spawnable");
             }
 
-            // คลิกเพื่อซื้อพื้นที่ (Hardcode ไว้ว่าเป็น Player 1 ซื้อ)
             cell.onclick = () => buyHex(1, r, c);
             grid.appendChild(cell);
         }
@@ -133,23 +127,27 @@ function buyHex(playerId, row, col) {
 
 // ฟังก์ชันจบเทิร์น
 function endTurn() {
-    fetch(`${API_URL}/end-turn`, { method: "POST" })
+    fetch(`${API_URL}/endturn`, { method: "POST" })
         .then(() => {
             log("Turn Ended.");
             updateBoard();
             showModal();
         })
-        .catch(err => showModal());
+        .catch(err => {
+            console.error("Error ending turn:", err);
+            showModal();
+        });
 }
 
 // ฟังก์ชันรีเซ็ตเกม
 function resetGame() {
-    fetch(`${API_URL}/reset`, { method: "POST" })
+    fetch(`${API_URL}/start`, { method: "POST" })
         .then(() => {
             closeModal();
             log("Game Restarted!");
             updateBoard();
-        });
+        })
+        .catch(err => console.error("Error resetting game:", err));
 }
 
 function showModal() {

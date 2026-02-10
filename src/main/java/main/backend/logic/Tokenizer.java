@@ -8,26 +8,30 @@ import java.util.regex.Pattern;
 public class Tokenizer {
     private String input;
 
-    // Constructor รับค่า String (โค้ดคำสั่ง)
     public Tokenizer(String input) {
         this.input = input;
     }
 
-    // เมธอดแยกคำ (Tokenize)
     public List<String> tokenize() {
         List<String> tokens = new ArrayList<>();
 
-        // Regex สำหรับจับคู่:
-        // 1. คำสั่ง/ตัวแปร (ตัวอักษรนำหน้า): [a-zA-Z_] ตามด้วย \w*
-        // 2. ตัวเลข: \d+
-        // 3. สัญลักษณ์ต่างๆ: + - * / % ^ = ( ) { } < >
-        String regex = "([a-zA-Z_]\\w*)|(\\d+)|([+=\\-*/%^(){}<>])";
+        // Regex:
+        // Group 1: Comment (# ตามด้วยตัวอักษรอะไรก็ได้จนจบเกี่ยว)
+        // Group 2: Identifier (ตัวแปร/คำสั่ง)
+        // Group 3: Number (ตัวเลข)
+        // Group 4: Operator/Symbol
+        String regex = "(#.*)|([a-zA-Z_]\\w*)|(\\d+)|([+=\\-*/%^(){}<>])";
 
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);
 
         while (matcher.find()) {
-            // ดึงเฉพาะส่วนที่ตรงกับ Regex (ตัดช่องว่างทิ้งอัตโนมัติ)
+            // ถ้าเจอ Group 1 (Comment) ให้ข้ามไป ไม่ต้องเพิ่มเข้า tokens
+            if (matcher.group(1) != null) {
+                continue;
+            }
+
+            // ดึงเฉพาะส่วนที่ตรงกับ Regex (Group 2, 3 หรือ 4)
             String token = matcher.group();
             tokens.add(token);
         }

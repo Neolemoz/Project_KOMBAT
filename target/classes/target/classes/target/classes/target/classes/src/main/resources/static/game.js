@@ -127,23 +127,27 @@ function buyHex(playerId, row, col) {
 
 // ฟังก์ชันจบเทิร์น
 function endTurn() {
-    fetch(`${API_URL}/end-turn`, { method: "POST" })
+    fetch(`${API_URL}/endturn`, { method: "POST" })
         .then(() => {
             log("Turn Ended.");
             updateBoard();
             showModal();
         })
-        .catch(err => showModal());
+        .catch(err => {
+            console.error("Error ending turn:", err);
+            showModal();
+        });
 }
 
 // ฟังก์ชันรีเซ็ตเกม
 function resetGame() {
-    fetch(`${API_URL}/reset`, { method: "POST" })
+    fetch(`${API_URL}/start`, { method: "POST" })
         .then(() => {
             closeModal();
             log("Game Restarted!");
             updateBoard();
-        });
+        })
+        .catch(err => console.error("Error resetting game:", err));
 }
 
 function showModal() {

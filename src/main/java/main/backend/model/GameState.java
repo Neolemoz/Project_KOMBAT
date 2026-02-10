@@ -11,25 +11,28 @@ public class GameState {
     private int rows = 8;
     private int cols = 8;
 
-    // กติกาเกม
     private int turnCount = 1;
     private int maxTurns;
     private int maxSpawns;
     private long spawnCost;
     private long initHp;
 
-    // เก็บจำนวน minion ที่ spawn ไปแล้ว
-    private Map<Integer, Integer> spawnCounts = new HashMap<>();
+    // เพิ่ม Field ใหม่ตาม Spec
+    private long maxBudget;
+    private double interestPct;
 
-    // --- เพิ่มส่วนนี้: เก็บพิกัดพื้นที่ Spawn ของแต่ละฝ่าย ---
+    private Map<Integer, Integer> spawnCounts = new HashMap<>();
     private Set<String> spawnableHexesP1 = new HashSet<>();
     private Set<String> spawnableHexesP2 = new HashSet<>();
 
-    public GameState(long initBudget, int maxTurns, int maxSpawns, long spawnCost, long initHp) {
+    // อัปเดต Constructor ให้รับ maxBudget และ interestPct
+    public GameState(long initBudget, int maxTurns, int maxSpawns, long spawnCost, long initHp, long maxBudget, double interestPct) {
         this.maxTurns = maxTurns;
         this.maxSpawns = maxSpawns;
         this.spawnCost = spawnCost;
         this.initHp = initHp;
+        this.maxBudget = maxBudget;     // New
+        this.interestPct = interestPct; // New
 
         this.board = new Hex[rows + 1][cols + 1];
         this.players = new HashMap<>();
@@ -49,60 +52,71 @@ public class GameState {
                 board[i][j] = new Hex(i, j);
             }
         }
-
-        // --- เพิ่มส่วนนี้: กำหนดพื้นที่ Spawn เริ่มต้น (ตาม Spec หน้า 3) ---
-        // Player 1: มุมซ้ายบน
+        // Player 1 Spawn zones
         spawnableHexesP1.add("1,1"); spawnableHexesP1.add("1,2"); spawnableHexesP1.add("1,3");
         spawnableHexesP1.add("2,1"); spawnableHexesP1.add("2,2");
 
-        // Player 2: มุมขวาล่าง
+        // Player 2 Spawn zones
         spawnableHexesP2.add("8,8"); spawnableHexesP2.add("8,7"); spawnableHexesP2.add("8,6");
         spawnableHexesP2.add("7,8"); spawnableHexesP2.add("7,7");
     }
 
-    // --- แก้ไข Logic การซื้อพื้นที่ (Spec ข้อ 93-94) ---
+    // --- New Methods for Evaluator Support ---
+
+    public long getMaxBudget() {
+        return maxBudget;
+    }
+
+    public long getRemainingSpawns(int playerId) {
+        return Math.max(0, maxSpawns - spawnCounts.getOrDefault(playerId, 0));
+    }
+
+    // คำนวณอัตราดอกเบี้ย (Spec หน้า 4 ข้อ 111)
+    // r = b * log10(m) * ln(t)
+    public long calculateInterest(long currentBudget) {
+        if (currentBudget <= 0) return 0;
+
+        // b = interestPct, m = currentBudget, t = turnCount
+        double r = interestPct * Math.log10(currentBudget) * Math.log(turnCount);
+        return (long) r; // Spec บอกว่า Int variable คืนค่าเป็น percentage (integer)
+    }
+    // -----------------------------------------
+
     public boolean buyHex(Player player, int row, int col, long cost) {
         if (!isValidHex(row, col)) return false;
-
         Hex target = board[row][col];
-        if (target.getOwner() != null) return false; // ห้ามซื้อทับ
+        if (target.getOwner() != null) return false;
 
-        // ตรวจสอบว่า "ติดกับพื้นที่ Spawn เดิม" ของตัวเองหรือไม่
         Set<String> mySpawnables = (player.getId() == 1) ? spawnableHexesP1 : spawnableHexesP2;
         boolean isAdjacent = false;
 
         String[] directions = {"up", "down", "upleft", "upright", "downleft", "downright"};
         for (String d : directions) {
             int[] neighbor = getNeighbor(row, col, d);
-            // neighbor[0] = row, neighbor[1] = col
             if (mySpawnables.contains(neighbor[0] + "," + neighbor[1])) {
                 isAdjacent = true;
                 break;
             }
         }
 
-        if (!isAdjacent) return false; // ไม่ติดกับพื้นที่ Spawn เดิม ซื้อไม่ได้
+        if (!isAdjacent) return false;
 
         if (player.spend(cost)) {
             target.setOwner(player);
-            // พื้นที่ที่ซื้อใหม่ กลายเป็นจุด Spawn ได้ด้วย (Spec ข้อ 95)
             mySpawnables.add(row + "," + col);
             return true;
         }
         return false;
     }
 
-    // --- แก้ไข Logic การ Spawn (Spec ข้อ 75-76) ---
     public boolean canSpawn(Player player, int row, int col) {
         if (!isValidHex(row, col)) return false;
-
-        // ต้องอยู่ในพื้นที่ Spawn ของตัวเองเท่านั้น
         Set<String> mySpawnables = (player.getId() == 1) ? spawnableHexesP1 : spawnableHexesP2;
         if (!mySpawnables.contains(row + "," + col)) return false;
 
         Hex target = board[row][col];
-        if (target.getOccupant() != null) return false; // ห้ามวางทับ Minion อื่น
-        if (spawnCounts.getOrDefault(player.getId(), 0) >= maxSpawns) return false; // ห้ามเกินโควต้า
+        if (target.getOccupant() != null) return false;
+        if (spawnCounts.getOrDefault(player.getId(), 0) >= maxSpawns) return false;
 
         return true;
     }
@@ -119,7 +133,6 @@ public class GameState {
         }
     }
 
-    // --- Logic การเคลื่อนที่และอื่นๆ (คงเดิม) ---
     public void moveMinion(Minion minion, String direction) {
         int[] nextPos = getNeighbor(minion.getRow(), minion.getCol(), direction);
         int r = nextPos[0];
@@ -156,9 +169,7 @@ public class GameState {
     }
 
     public Hex getHex(int row, int col) {
-        if (isValidHex(row, col)) {
-            return board[row][col];
-        }
+        if (isValidHex(row, col)) return board[row][col];
         return null;
     }
 
