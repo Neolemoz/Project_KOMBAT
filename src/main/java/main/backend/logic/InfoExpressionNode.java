@@ -3,8 +3,8 @@ package main.backend.logic;
 import main.backend.model.MinionContext;
 
 public class InfoExpressionNode extends ExpressionNode {
-    private String type; // "ally", "opponent", "nearby"
-    private String direction; // only for "nearby", null otherwise
+    private String type;      // เก็บค่า "ally", "opponent", หรือ "nearby"
+    private String direction; // เก็บทิศทาง เช่น "up", "down" (ถ้ามี)
 
     public InfoExpressionNode(String type, String direction) {
         this.type = type;
@@ -13,8 +13,10 @@ public class InfoExpressionNode extends ExpressionNode {
 
     @Override
     public long evaluate(MinionContext ctx) {
-        // การคำนวณจะถูกส่งไปให้ StrategyEvaluator หรือคำนวณผ่าน Context
-        // ในที่นี้เราจะให้ Context หรือ Evaluator จัดการ
+        // ส่งไปคำนวณค่าจริงที่ MinionContext (เราจะไปแก้ Context ในขั้นตอนถัดไป)
         return ctx.evaluateInfo(type, direction);
     }
+
+    public String getType() { return type; }
+    public String getDirection() { return direction; }
 }

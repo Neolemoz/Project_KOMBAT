@@ -10,6 +10,7 @@ public class Player {
     private double budget; // ใช้ double เพื่อความแม่นยำของดอกเบี้ย
     private List<Minion> minions; // รายชื่อมินิยอนในสังกัด
     private Map<String, Long> globalVars; // ตัวแปร Global (ตัวพิมพ์ใหญ่) แชร์กันทั้งทีม
+    private Map<String, Long> globalMemory = new HashMap<>();
 
     public Player(int id, double initBudget) {
         this.id = id;
@@ -72,4 +73,23 @@ public class Player {
     // --- Getters ทั่วไป ---
     public int getId() { return id; }
     public double getBudget() { return budget; }
+    public Map<String, Long> getGlobalMemory() { return globalMemory; }
+
+    // นับจำนวน Minion ที่ยังไม่ตาย
+    public int getAliveMinionCount() {
+        int count = 0;
+        for (Minion m : minions) {
+            if (m.isAlive()) count++;
+        }
+        return count;
+    }
+
+    // ผลรวม HP ของ Minion ทั้งหมดที่ยังไม่ตาย
+    public long getTotalHp() {
+        long total = 0;
+        for (Minion m : minions) {
+            if (m.isAlive()) total += m.getHp();
+        }
+        return total;
+    }
 }

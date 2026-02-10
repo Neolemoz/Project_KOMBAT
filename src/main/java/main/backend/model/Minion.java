@@ -2,6 +2,8 @@ package main.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import main.backend.logic.Node;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Minion {
 
@@ -14,7 +16,7 @@ public class Minion {
     private int defense;
     private Node strategyAST;
     private String name;
-
+    private Map<String, Long> memory = new HashMap<>();
 
     // --- Constructor แบบที่ 1: รับครบ 6 ค่า (ใช้ตอนสร้างจาก MinionType) ---
     public Minion(Player owner, int row, int col, int maxHp, int defense, String name) {
@@ -66,4 +68,5 @@ public class Minion {
     public void setStrategyAST(Node strategyAST) { this.strategyAST = strategyAST; }
 
     public String getName() { return name; }
+    public Map<String, Long> getMemory() { return memory; }
 }

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KOMBAT Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="start-screen">
+    <div class="start-bg"></div>
+
+    <div class="title-frame">
+        <div class="title-text">KOMBAT GAME</div>
+    </div>
+
+    <div class="minion-list-frame" onclick="alert('Feature Coming Soon!')">
+        <div class="btn-text">MINION LIST</div>
+    </div>
+
+    <div class="start-game-frame" onclick="startGame()">
+        <div class="btn-text">START GAME</div>
+    </div>
+
+    <div class="decoration-group">
+        <div class="vec v1"></div> <div class="vec v2"></div> <div class="vec v3"></div>
+        <div class="vec v4"></div> <div class="vec v5"></div> <div class="vec v6"></div>
+        <div class="vec v7"></div> <div class="vec v8"></div> <div class="vec v9"></div>
+        <div class="vec v10"></div> <div class="vec v11"></div> <div class="vec v12"></div>
+        <div class="vec v13"></div> <div class="vec v14"></div> <div class="vec v15"></div>
+        <div class="vec v16"></div> <div class="vec v17"></div> <div class="vec v18"></div>
+        <div class="vec v19"></div> <div class="vec v20"></div> <div class="vec v21"></div>
+        <div class="vec v22"></div> <div class="vec v23"></div> <div class="vec v24"></div>
+        <div class="vec v25"></div> <div class="vec v26"></div> <div class="vec v27"></div>
+        <div class="vec v28"></div> <div class="vec v29"></div> <div class="vec v30"></div>
+    </div>
+</div>
+
+<div class="game-container" style="display: none;">
+    <div class="status-bar">
+        <div id="p1-stats" class="player-stats p1">P1 Budget: 0</div>
+        <div class="turn-info">Turn: <span id="turn-count">1</span></div>
+        <div id="p2-stats" class="player-stats p2">P2 Budget: 0</div>
+    </div>
+
+    <div id="hex-grid" class="hex-grid"></div>
+
+    <div class="controls">
+        <button onclick="endTurn()" class="btn-end">End Turn</button>
+        <button onclick="resetGame()" class="btn-reset">Restart</button>
+    </div>
+
+    <div id="game-log" class="log-panel">Game Started...</div>
+</div>
+
+<div id="restart-modal" class="modal hidden">
+    <div class="modal-content">
+        <h2>🔁 End of Turn / Game Over</h2>
+        <p>The board needs to be refreshed.</p>
+        <button onclick="resetGame()" class="btn-modal-restart">Start New Game</button>
+        <button onclick="closeModal()" class="btn-modal-close">View Board</button>
+    </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

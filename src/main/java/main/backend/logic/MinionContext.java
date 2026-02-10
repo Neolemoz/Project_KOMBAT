@@ -1,136 +1,54 @@
 package main.backend.logic;
 
 import main.backend.model.GameState;
-import main.backend.model.Hex;
 import main.backend.model.Minion;
-import main.backend.model.Player;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
 
 public class MinionContext {
     private Minion minion;
     private GameState gameState;
-    private Map<String, Long> localVariables;
 
     public MinionContext(Minion minion, GameState gameState) {
         this.minion = minion;
         this.gameState = gameState;
-        this.localVariables = new HashMap<>();
+    }
+
+    public Minion getMinion() { return minion; }
+    public GameState getGameState() { return gameState; }
+
+    // --- จัดการตัวแปร (Variable Scope) ตาม Spec หน้า 5 ข้อ 143-148 ---
+    public void setVariable(String name, long value) {
+        if (Character.isUpperCase(name.charAt(0))) {
+            // ตัวพิมพ์ใหญ่ -> Global Variable (เก็บที่ Player)
+            minion.getOwner().getGlobalMemory().put(name, value);
+        } else {
+            // ตัวพิมพ์เล็ก -> Local Variable (เก็บที่ Minion)
+            minion.getMemory().put(name, value);
+        }
     }
 
     public long getVariable(String name) {
-        // 1. ตัวแปรระบบ
+        // 1. เช็คตัวแปรระบบ (Reserved Words)
+        if (name.equals("Budget")) return minion.getOwner().getBudget();
         if (name.equals("row")) return minion.getRow();
         if (name.equals("col")) return minion.getCol();
-        if (name.equals("budget")) return minion.getOwner().getBudgetLong();
-        if (name.equals("int")) return (long) (minion.getOwner().getBudget() * calculateInterestRate());
-        if (name.equals("max_budget")) return 10000;
-        if (name.equals("safe")) return 0;
-        if (name.equals("random")) return new Random().nextInt(1000);
+        if (name.equals("int")) return (long) (minion.getOwner().getBudget() * configInterest()); // ต้องแก้ให้ดึงสูตรดอกเบี้ยจริง
+        if (name.equals("maxbudget")) return 10000; // ค่าสมมติ ควรดึงจาก Config
+        if (name.equals("random")) return (long) (Math.random() * 1000);
 
-        // 1.1 จัดการ nearby_ทิศทาง
-        if (name.startsWith("nearby_")) {
-            String direction = name.substring(7);
-            return calculateNearby(direction);
-        }
-
-        // 2. Info Expressions (Sensors)
-        if (name.equals("ally")) return calculateClosest(false);
-        if (name.equals("opponent")) return calculateClosest(true);
-
-        // 3. ตัวแปร Global (ตัวพิมพ์ใหญ่)
+        // 2. เช็คตัวแปร Global/Local
         if (Character.isUpperCase(name.charAt(0))) {
-            return minion.getOwner().getGlobalVars().getOrDefault(name, 0L);
-        }
-
-        // 4. ตัวแปร Local (ตัวพิมพ์เล็ก)
-        return localVariables.getOrDefault(name, 0L);
-    }
-
-    public void setVariable(String name, long value) {
-        if (isSystemVar(name)) return;
-
-        if (Character.isUpperCase(name.charAt(0))) {
-            minion.getOwner().getGlobalVars().put(name, value);
+            return minion.getOwner().getGlobalMemory().getOrDefault(name, 0L);
         } else {
-            localVariables.put(name, value);
+            return minion.getMemory().getOrDefault(name, 0L);
         }
     }
 
-    private boolean isSystemVar(String name) {
-        return name.equals("row") || name.equals("col") || name.equals("budget") ||
-                name.equals("int") || name.equals("max_budget") || name.equals("random") ||
-                name.equals("ally") || name.equals("opponent") || name.startsWith("nearby_");
-    }
+    // Helper ชั่วคราว (ควรดึงจาก Config จริง)
+    private double configInterest() { return 0.05; }
 
-    private double calculateInterestRate() {
-        return 0.05;
-    }
-
-    private long calculateNearby(String direction) {
-        int[] next = gameState.getNeighbor(minion.getRow(), minion.getCol(), direction);
-
-        if (!gameState.isValidHex(next[0], next[1])) return 0;
-
-        Hex h = gameState.getHex(next[0], next[1]);
-        if (h == null || h.getOccupant() == null) return 0;
-
-        Minion target = h.getOccupant();
-        int hpLen = String.valueOf(target.getHp()).length();
-        int defLen = String.valueOf(target.getDefense()).length();
-        int dist = 1;
-
-        long val = (100L * hpLen) + (10L * defLen) + dist;
-        return (target.getOwner() == minion.getOwner()) ? -val : val;
-    }
-
-    private long calculateClosest(boolean findOpponent) {
-        long minVal = Long.MAX_VALUE;
-        boolean found = false;
-        String[] dirs = {"up", "upright", "downright", "down", "downleft", "upleft"};
-
-        for (int i = 0; i < 6; i++) {
-            int dirVal = i + 1;
-            int r = minion.getRow();
-            int c = minion.getCol();
-            int dist = 0;
-
-            while (true) {
-                int[] next = gameState.getNeighbor(r, c, dirs[i]);
-                r = next[0];
-                c = next[1];
-                dist++;
-
-                if (!gameState.isValidHex(r, c)) break;
-
-                Hex h = gameState.getHex(r, c);
-                if (h.getOccupant() != null) {
-                    boolean isOpponent = (h.getOccupant().getOwner().getId() != minion.getOwner().getId());
-                    if (isOpponent == findOpponent) {
-                        long val = (dist * 10L) + dirVal;
-                        if (val < minVal) minVal = val;
-                        found = true;
-                        break;
-                    }
-                }
-            }
-        }
-        return found ? minVal : 0;
-    }
-
-    // --- ส่วนที่เพิ่มมา (แก้ Error) ---
-    public Minion getMinion() {
-        return minion;
-    }
-
-    public GameState getGameState() {
-        return gameState;
-    }
-
+    // --- ส่วนที่เพิ่มใหม่: รองรับ InfoExpression (nearby, ally, opponent) ---
     public long evaluateInfo(String type, String direction) {
-        // ส่งต่อไปให้ Evaluator หรือ GameState คำนวณ
+        // ส่งไปคำนวณที่ StrategyEvaluator (เพราะ Logic มันซับซ้อน)
         return StrategyEvaluator.calculateInfo(this, type, direction);
     }
 }
