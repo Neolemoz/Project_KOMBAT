@@ -92,4 +92,12 @@ public class Player {
         }
         return total;
     }
+
+    public void addBudget(double amount) {
+        this.budget += amount;
+    }
+
+    public void setBudget(double amount) {
+        this.budget = amount;
+    }
 }

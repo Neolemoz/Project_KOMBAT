@@ -18,15 +18,15 @@ public class Minion {
     private String name;
     private Map<String, Long> memory = new HashMap<>();
 
-    // --- Constructor แบบที่ 1: รับครบ 6 ค่า (ใช้ตอนสร้างจาก MinionType) ---
-    public Minion(Player owner, int row, int col, int maxHp, int defense, String name) {
+    // --- Constructor: รับครบ 6 ค่า (ใช้ตอนสร้างจาก MinionType) ---
+    public Minion(Player owner, long defense, long maxHp, Node strategyAST) {
         this.owner = owner;
-        this.row = row;
-        this.col = col;
-        this.hp = maxHp;
-        this.maxHp = maxHp;
-        this.defense = defense;
-        this.name = name;
+        this.defense = (int) defense;
+        this.maxHp = (int) maxHp;
+        this.hp = (int) maxHp;
+        this.strategyAST = strategyAST;
+        this.name = "Minion"; // ตั้งชื่อ Default
+        this.memory = new HashMap<>(); // อย่าลืม initialize memory
     }
 
     // --- Methods ---
@@ -66,6 +66,10 @@ public class Minion {
 
     public Node getStrategyAST() { return strategyAST; }
     public void setStrategyAST(Node strategyAST) { this.strategyAST = strategyAST; }
+
+    public Node getStrategy() {
+        return strategyAST;
+    }
 
     public String getName() { return name; }
     public Map<String, Long> getMemory() { return memory; }

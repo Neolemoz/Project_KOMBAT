@@ -1,33 +1,47 @@
 package main.backend.logic;
 
+import org.springframework.stereotype.Component; // เพิ่ม import
+import java.util.HashMap;
+import java.util.Map;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
+@Component // <--- ต้องใส่ตรงนี้ เพื่อให้ Spring สร้าง ConfigLoader ให้ GameService
 public class ConfigLoader {
-    private Map<String, Long> settings = new HashMap<>();
+    private Map<String, Long> config = new HashMap<>();
 
-    public void loadConfig(String filePath) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+    public ConfigLoader() { // Default constructor ที่ Spring จะเรียกใช้
+        // โหลดไฟล์ config.txt (อาจต้องระบุ Path ให้ถูกถ้าหาไม่เจอ)
+        load("config.txt");
+    }
+
+    // ... (ส่วน load และ get คงเดิม) ...
+    public void load(String filename) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             String line;
-            while ((line = br.readLine()) != null) {
-                // ข้ามบรรทัดว่างหรือ comment
-                if (line.trim().isEmpty() || line.trim().startsWith("#") || line.trim().startsWith("[")) continue;
-
+            while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("=");
                 if (parts.length == 2) {
-                    // Parse เป็น Long
-                    settings.put(parts[0].trim(), Long.parseLong(parts[1].trim()));
+                    config.put(parts[0].trim(), Long.parseLong(parts[1].trim()));
                 }
             }
-        } catch (IOException | NumberFormatException e) {
+        } catch (IOException e) {
             e.printStackTrace();
+            // ควรกำหนดค่า Default กันตายไว้ถ้าโหลดไฟล์ไม่ได้
+            config.put("init_budget", 10000L);
+            config.put("max_turns", 100L);
+            config.put("max_spawns", 10L);
+            config.put("spawn_cost", 100L);
+            config.put("init_hp", 1000L);
+            config.put("hex_purchase_cost", 100L);
+            config.put("interest_pct", 5L);
+            config.put("turn_budget", 100L);
+            config.put("max_budget", 50000L);
         }
     }
 
-    public long get(String key) { return settings.getOrDefault(key, 0L); }
-    // แถม method สำหรับดึงค่า int ถ้าจำเป็น
-    public int getInt(String key) { return settings.getOrDefault(key, 0L).intValue(); }
+    public long get(String key) {
+        return config.getOrDefault(key, 0L);
+    }
 }

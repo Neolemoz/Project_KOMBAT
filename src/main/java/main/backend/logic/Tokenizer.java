@@ -6,18 +6,32 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Tokenizer {
-    // กฎการตัดคำ: จับคู่คำ (Identifiers), ตัวเลข, หรือสัญลักษณ์พิเศษ
-    private static final Pattern TOKEN_PATTERN = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*|\\d+|[(){}=+\\-*/%<>]");
+    private String input;
 
-    public static List<String> tokenize(String script) {
+    // Constructor รับค่า String (โค้ดคำสั่ง)
+    public Tokenizer(String input) {
+        this.input = input;
+    }
+
+    // เมธอดแยกคำ (Tokenize)
+    public List<String> tokenize() {
         List<String> tokens = new ArrayList<>();
-        // ลบ Comment (ถ้ามี) และบรรทัดใหม่
-        String cleanScript = script.replaceAll("#.*", "").replace("\n", " ");
 
-        Matcher m = TOKEN_PATTERN.matcher(cleanScript);
-        while (m.find()) {
-            tokens.add(m.group());
+        // Regex สำหรับจับคู่:
+        // 1. คำสั่ง/ตัวแปร (ตัวอักษรนำหน้า): [a-zA-Z_] ตามด้วย \w*
+        // 2. ตัวเลข: \d+
+        // 3. สัญลักษณ์ต่างๆ: + - * / % ^ = ( ) { } < >
+        String regex = "([a-zA-Z_]\\w*)|(\\d+)|([+=\\-*/%^(){}<>])";
+
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(input);
+
+        while (matcher.find()) {
+            // ดึงเฉพาะส่วนที่ตรงกับ Regex (ตัดช่องว่างทิ้งอัตโนมัติ)
+            String token = matcher.group();
+            tokens.add(token);
         }
+
         return tokens;
     }
 }
