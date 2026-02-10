@@ -7,22 +7,27 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ConfigLoader {
-    private Map<String, Double> settings = new HashMap<>();
+    private Map<String, Long> settings = new HashMap<>();
 
     public void loadConfig(String filePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
+                // ข้ามบรรทัดว่างหรือ comment
+                if (line.trim().isEmpty() || line.trim().startsWith("#") || line.trim().startsWith("[")) continue;
+
                 String[] parts = line.split("=");
                 if (parts.length == 2) {
-                    settings.put(parts[0].trim(), Double.parseDouble(parts[1].trim()));
+                    // Parse เป็น Long
+                    settings.put(parts[0].trim(), Long.parseLong(parts[1].trim()));
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | NumberFormatException e) {
             e.printStackTrace();
         }
     }
 
-    public double get(String key) { return settings.getOrDefault(key, 0.0); }
-    public long getLong(String key) { return settings.getOrDefault(key, 0.0).longValue(); }
+    public long get(String key) { return settings.getOrDefault(key, 0L); }
+    // แถม method สำหรับดึงค่า int ถ้าจำเป็น
+    public int getInt(String key) { return settings.getOrDefault(key, 0L).intValue(); }
 }

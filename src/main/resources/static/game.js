@@ -10,6 +10,23 @@ function startGame() {
     // ซ่อนหน้า Start Screen
     document.getElementById("start-screen").style.display = "none";
 
+    // แสดงหน้า Select Mode แทนที่จะเข้าเกมเลย
+    document.getElementById("select-mode-screen").style.display = "block";
+}
+
+// เพิ่มฟังก์ชันย้อนกลับไปหน้าแรก (ถ้าต้องการ)
+function backToStart() {
+    document.getElementById("select-mode-screen").style.display = "none";
+    document.getElementById("start-screen").style.display = "block";
+}
+
+// เพิ่มฟังก์ชันสำหรับเลือกโหมดแล้วเข้าเกม
+function enterGame(mode) {
+    console.log("Selected Mode:", mode); // เช็คว่าเลือกโหมดอะไร (เผื่อใช้ในอนาคต)
+
+    // ซ่อนหน้า Select Mode
+    document.getElementById("select-mode-screen").style.display = "none";
+
     // แสดงหน้าเกม (Game Container)
     const gameContainer = document.querySelector(".game-container");
     gameContainer.style.display = "inline-block";

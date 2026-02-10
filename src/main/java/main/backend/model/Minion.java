@@ -15,7 +15,7 @@ public class Minion {
     private Node strategyAST;
     private String name;
 
-    // Constructor หลัก (6 ตัวแปร)
+    // --- Constructor แบบที่ 1: รับครบ 6 ค่า (ใช้ตอนสร้างจาก MinionType) ---
     public Minion(Player owner, int row, int col, int maxHp, int defense, String name) {
         this.owner = owner;
         this.row = row;
@@ -26,13 +26,7 @@ public class Minion {
         this.name = name;
     }
 
-    // --- เพิ่ม Constructor นี้ (แก้ Error expected 6 but found 3) ---
-    public Minion(Player owner, int row, int col) {
-        // เรียก Constructor หลักโดยกำหนดค่าเริ่มต้นให้: HP=100, Def=0, Name="Minion"
-        this(owner, row, col, 100, 0, "Minion");
-    }
-
-    // --- เมธอดจัดการสถานะ ---
+    // --- Methods ---
     public boolean isAlive() {
         return hp > 0;
     }
@@ -43,8 +37,6 @@ public class Minion {
     }
 
     // --- Getters & Setters ---
-
-    // เพิ่มเมธอดนี้เพื่อความสะดวก (GameState อาจจะเรียกใช้)
     public void setPosition(int row, int col) {
         this.row = row;
         this.col = col;
@@ -61,8 +53,12 @@ public class Minion {
     public void setCol(int col) { this.col = col; }
 
     public int getHp() { return hp; }
-    public void setHp(int hp) { this.hp = hp; }
+    public void setHp(int hp) {
+        this.hp = hp;
+        this.maxHp = hp; // อัปเดต maxHp ด้วยถ้ามีการ setHp ใหม่
+    }
 
+    public int getMaxHp() { return maxHp; }
     public int getDefense() { return defense; }
 
     public Node getStrategyAST() { return strategyAST; }

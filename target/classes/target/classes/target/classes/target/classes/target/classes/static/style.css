@@ -3,8 +3,155 @@ body {
     background-color: #2c3e50;
     color: white;
     text-align: center;
+    margin: 0;
+    padding: 0;
 }
 
+/* --- Start Screen Styles --- */
+#start-screen {
+    position: relative;
+    width: 1280px;
+    height: 832px;
+    background: #FFFFFF;
+    margin: 0 auto; /* จัดกึ่งกลาง */
+    overflow: hidden;
+}
+
+.start-bg {
+    position: absolute;
+    width: 1588px;
+    height: 890px;
+    left: -308px;
+    top: -29px;
+    /* หมายเหตุ: คุณต้องมีไฟล์รูปภาพนี้ในโฟลเดอร์ static */
+    background: url('bg-start.jpg');
+    background-size: cover;
+}
+
+/* Frame 10 */
+.title-frame {
+    position: absolute;
+    width: 554px;
+    height: 297px;
+    left: 363px;
+    top: 51px;
+    background: #E9FFE9;
+    opacity: 0.72;
+    border-radius: 167px;
+}
+
+.title-text {
+    position: absolute;
+    width: 493px;
+    height: 222px;
+    left: 30px;
+    top: 38px;
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 96px;
+    line-height: 116px;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #000000;
+    pointer-events: none; /* ไม่ให้บังเมาส์ */
+}
+
+/* Frame 11 */
+.minion-list-frame {
+    position: absolute;
+    width: 356px;
+    height: 108px;
+    left: 7px;
+    top: 716px;
+    background: #E9FFE9;
+    opacity: 0.72;
+    border-radius: 167px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.minion-list-frame:hover { transform: scale(1.05); opacity: 0.9; }
+
+/* Frame 12 */
+.start-game-frame {
+    position: absolute;
+    width: 356px;
+    height: 108px;
+    left: 917px;
+    top: 716px;
+    background: #E9FFE9;
+    opacity: 0.72;
+    border-radius: 167px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.start-game-frame:hover { transform: scale(1.05); opacity: 0.9; }
+
+.btn-text {
+    position: absolute;
+    width: 267px;
+    height: 50px;
+    left: 44px;
+    top: 29px;
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 40px;
+    line-height: 48px;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #000000;
+    pointer-events: none;
+}
+
+/* --- Decoration Vectors (Group 1) --- */
+.decoration-group {
+    position: absolute;
+    width: 193.04px;
+    height: 136.73px;
+    left: 170px;
+    top: 608px;
+}
+.vec { position: absolute; }
+
+/* Mapping Vectors ตามลำดับใน Prompt */
+.v1 { left: 25.69%; right: 71.64%; top: 75%; bottom: 21.82%; background: #D7D1D1; }
+.v2 { left: 14.1%; right: 73.01%; top: 73.08%; bottom: 10.49%; background: #EDE6E6; }
+.v3 { left: 16.33%; right: 82.23%; top: 88.31%; bottom: 10.49%; background: #D7D1D1; }
+.v4 { left: 18.55%; right: 80.15%; top: 88.31%; bottom: 10.6%; background: #BAB5B5; }
+.v5 { left: 21.96%; right: 76.75%; top: 88.31%; bottom: 10.72%; background: #BAB5B5; }
+.v6 { left: 23.81%; right: 74.87%; top: 88.31%; bottom: 10.65%; background: #D7D1D1; }
+.v7 { left: 18.39%; right: 80.51%; top: 77%; bottom: 21.23%; background: #BAB5B5; }
+.v8 { left: 18.34%; right: 81.08%; top: 77.11%; bottom: 21.33%; background: #000000; }
+.v9 { left: 14.71%; right: 84.19%; top: 77%; bottom: 21.23%; background: #BAB5B5; }
+.v10 { left: 14.71%; right: 84.71%; top: 77.11%; bottom: 21.33%; background: #000000; }
+.v11 { left: 16.32%; right: 82.4%; top: 78.68%; bottom: 20.17%; background: #000000; }
+.v12 { left: 16.64%; right: 82.88%; top: 78.41%; bottom: 21.21%; background: #000000; }
+.v13 { left: 19.81%; right: 79.25%; top: 78.26%; bottom: 21.33%; background: #000000; }
+.v14 { left: 19.39%; right: 79.3%; top: 79.19%; bottom: 20.55%; background: #000000; }
+.v15 { left: 19.57%; right: 79.07%; top: 80.01%; bottom: 19.3%; background: #000000; }
+.v16 { left: 13.28%; right: 85.19%; top: 79.45%; bottom: 19.45%; background: #000000; }
+.v17 { left: 13.92%; right: 85.13%; top: 80.09%; bottom: 19.07%; background: #000000; }
+.v18 { left: 14.3%; right: 84.82%; top: 80.53%; bottom: 18.47%; background: #000000; }
+
+/* Sword Part */
+.v19 { left: 86.54%; right: 4.53%; top: 70.31%; bottom: 16.16%; background: #000000; }
+.v20 { left: 86.98%; right: 4.82%; top: 71.03%; bottom: 16.87%; background: #FFFFFF; border: 0.5px solid #231F20; }
+.v21 { left: 87.37%; right: 6.46%; top: 73.22%; bottom: 17.09%; background: #A6A8AB; }
+.v22 { left: 83.75%; right: 11.62%; top: 80.6%; bottom: 12.86%; background: #000000; border: 0.5px solid #231F20; }
+.v23 { left: 85.12%; right: 12.45%; top: 82.26%; bottom: 14.54%; background: #58595B; border: 0.5px solid #231F20; }
+.v24 { left: 84.56%; right: 11.81%; top: 80.88%; bottom: 13.16%; background: #D1AA67; }
+.v25 { left: 85.6%; right: 11.88%; top: 81%; bottom: 13.28%; background: #FFFFFF; }
+.v26 { left: 83.93%; right: 15.23%; top: 85.44%; bottom: 13.24%; background: #D1AA67; }
+.v27 { left: 84.17%; right: 15.46%; top: 85.58%; bottom: 13.83%; background: #FFFFFF; }
+.v28 { left: 84.22%; right: 6.85%; top: 70.31%; bottom: 16.16%; background: #000000; }
+.v29 { left: 84.51%; right: 7.29%; top: 71.03%; bottom: 16.87%; background: #FFFFFF; border: 0.5px solid #231F20; }
+.v30 { left: 86.15%; right: 7.68%; top: 73.22%; bottom: 17.09%; background: #A6A8AB; }
+
+
+/* --- Game Container (ของเดิม) --- */
 .game-container {
     display: inline-block;
     margin-top: 20px;
@@ -23,34 +170,24 @@ body {
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
-/* --- ส่วนสำคัญที่ปรับปรุง --- */
 .hex-grid {
-    /* คำนวณความกว้าง: (60px + 4px gap) * 8 ช่อง = 512px */
-    /* เผื่อพื้นที่ให้แถวคู่ที่เยื้องออกมาอีก 32px -> รวม 544px */
-    /* กำหนดค่า Width ให้เป๊ะ เพื่อบังคับให้มันตัดบรรทัดที่ตัวที่ 8 พอดี */
     width: 550px;
-
     margin: 0 auto;
     padding-top: 20px;
-    padding-left: 15px; /* จัดกึ่งกลางให้สมดุล */
+    padding-left: 15px;
     display: flex;
     flex-wrap: wrap;
-    transform: scale(1.1); /* ขยายกระดานให้ใหญ่ขึ้นเล็กน้อย */
+    transform: scale(1.1);
 }
 
 .hex-cell {
     width: 60px;
-    height: 68px; /* สัดส่วนที่สวยงามสำหรับ 6 เหลี่ยม */
+    height: 68px;
     background-color: #95a5a6;
-
-    /* ระยะห่าง */
     margin-right: 2px;
     margin-left: 2px;
-    margin-bottom: -16px; /* ดึงแถวล่างขึ้นมาซ้อนกัน (Overlap) */
-
-    /* ตัดขอบเป็น 6 เหลี่ยม */
+    margin-bottom: -16px;
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-
     display: flex;
     align-items: center;
     justify-content: center;
@@ -61,31 +198,24 @@ body {
     transition: all 0.2s;
 }
 
-/* --- สูตรเยื้อง (Staggered Row) --- */
-/* แถวคู่ (ตัวที่ 9, 25, 41...) ให้ดันไปทางขวา */
-/* margin-left = ครึ่งหนึ่งของความกว้าง (30px) + gap (2px) = 32px */
 .hex-cell:nth-child(16n + 9) {
     margin-left: 34px;
 }
 
-/* เอฟเฟกต์ตอนชี้ */
 .hex-cell:hover {
     background-color: #bdc3c7;
     transform: scale(1.15);
     z-index: 20;
 }
 
-/* สีพื้นที่เจ้าของ */
 .hex-cell.p1-owned { background-color: #3498db; }
 .hex-cell.p2-owned { background-color: #e74c3c; }
 
-/* ช่องที่ซื้อได้ */
 .hex-cell.spawnable {
     background-color: #f1c40f;
     opacity: 0.8;
 }
 
-/* ตัวมินิยอน */
 .minion {
     width: 38px;
     height: 38px;
@@ -116,7 +246,7 @@ body {
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 .btn-end:hover { background-color: #e67e22; }
-/* ปุ่ม Reset เล็กๆ */
+
 .btn-reset {
     margin-top: 50px;
     margin-left: 10px;
@@ -130,12 +260,11 @@ body {
 }
 .btn-reset:hover { background-color: #95a5a6; }
 
-/* --- สไตล์ของ Popup Modal --- */
 .modal {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* พื้นหลังสีดำจางๆ */
+    background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -143,7 +272,7 @@ body {
 }
 
 .modal.hidden {
-    display: none; /* ซ่อนไว้ถ้ายังไม่ใช้ */
+    display: none;
 }
 
 .modal-content {
@@ -179,4 +308,44 @@ body {
     border-radius: 5px;
     cursor: pointer;
     margin: 5px;
+}
+
+/* --- Select Mode Styles --- */
+#select-mode-screen {
+    position: relative;
+    width: 1280px;
+    height: 832px;
+    background: #FFFFFF;
+    margin: 0 auto; /* จัดกึ่งกลางเหมือนหน้า Start */
+    overflow: hidden;
+}
+
+/* สไตล์ปุ่มเลือกโหมด (คล้ายปุ่ม Start แต่จัดตำแหน่งกลาง) */
+.mode-btn-frame {
+    position: absolute;
+    width: 400px; /* ปรับความกว้างให้พอดีข้อความ */
+    height: 108px;
+    left: 440px; /* (1280 - 400) / 2 = 440 เพื่อให้อยู่กึ่งกลาง */
+    background: #E9FFE9;
+    opacity: 0.72;
+    border-radius: 167px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    display: flex;
+    justify-content: center; /* จัดข้อความให้อยู่กลางปุ่ม */
+    align-items: center;
+}
+
+.mode-btn-frame:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* ปรับตำแหน่งข้อความในปุ่มโหมด */
+.mode-btn-frame .btn-text {
+    position: static; /* ยกเลิก absolute เดิมเพื่อให้จัดกลางง่ายขึ้น */
+    width: auto;
+    height: auto;
+    left: auto;
+    top: auto;
 }

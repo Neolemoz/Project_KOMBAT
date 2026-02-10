@@ -9,11 +9,28 @@ public class GameState {
     private int rows = 8;
     private int cols = 8;
 
-    public GameState(double initBudget) {
-        this.board = new Hex[rows + 1][cols + 1]; // เริ่มที่ index 1 ตามโจทย์
-        this.players = new HashMap<>();
+    // ตัวแปรสำหรับกติกาเกม
+    private int turnCount = 1;
+    private int maxTurns;
+    private int maxSpawns;
+    private long spawnCost;
+    private long initHp; // ค่า HP เริ่มต้น (อาจเก็บไว้ใช้เป็น Default หรืออ้างอิง)
 
-        // สร้างผู้เล่น 2 คน
+    // เก็บจำนวน minion ที่ spawn ไปแล้วของแต่ละคน
+    private Map<Integer, Integer> spawnCounts = new HashMap<>();
+
+    public GameState(long initBudget, int maxTurns, int maxSpawns, long spawnCost, long initHp) {
+        this.maxTurns = maxTurns;
+        this.maxSpawns = maxSpawns;
+        this.spawnCost = spawnCost;
+        this.initHp = initHp;
+
+        this.board = new Hex[rows + 1][cols + 1];
+        this.players = new HashMap<>();
+        // กำหนดค่าเริ่มต้นจำนวน Spawn เป็น 0
+        this.spawnCounts.put(1, 0);
+        this.spawnCounts.put(2, 0);
+
         players.put(1, new Player(1, initBudget));
         players.put(2, new Player(2, initBudget));
 
@@ -29,23 +46,16 @@ public class GameState {
     }
 
     // --- Logic การซื้อพื้นที่ ---
-    public boolean buyHex(Player player, int row, int col, double cost) {
+    public boolean buyHex(Player player, int row, int col, long cost) {
         if (!isValidHex(row, col)) return false;
 
         Hex target = board[row][col];
-        if (target.getOwner() != null) return false; // มีคนจองแล้ว
+        if (target.getOwner() != null) return false; // มีเจ้าของแล้ว
 
-        // เช็คว่าซื้อได้ไหม (ต้องติดกับพื้นที่ตัวเอง หรือเป็นจุดเริ่มต้น)
-        // เพื่อความง่ายในขั้นต้น: อนุญาตให้ซื้อได้ถ้าเงินพอ (หรือจะเพิ่ม Logic isSpawnable ตรงนี้ก็ได้)
+        // TODO: เพิ่ม logic เช็คว่าติดกับพื้นที่ตัวเองหรือไม่ (Adjacency Check) ตามกติกาจริง
+
         if (player.spend(cost)) {
             target.setOwner(player);
-
-            // แถม Minion ให้ 1 ตัวเมื่อซื้อที่ (ตามกติกาพื้นฐาน หรือจะแยกปุ่ม Spawn ก็ได้)
-            // ในที่นี้สมมติว่าซื้อที่แล้วได้ Minion เลยเพื่อทดสอบ
-            Minion m = new Minion(player, row, col);
-            player.addMinion(m);
-            target.setOccupant(m);
-
             return true;
         }
         return false;
@@ -60,10 +70,7 @@ public class GameState {
         if (isValidHex(r, c)) {
             Hex currentHex = board[minion.getRow()][minion.getCol()];
             Hex nextHex = board[r][c];
-
-            // เดินได้ถ้าไม่มีคนขวาง
             if (nextHex.getOccupant() == null) {
-                // ย้ายตัว
                 currentHex.setOccupant(null);
                 nextHex.setOccupant(minion);
                 minion.setPosition(r, c);
@@ -71,39 +78,8 @@ public class GameState {
         }
     }
 
-    // --- Logic คำนวณทิศทางหกเหลี่ยม (สำคัญมาก!) ---
-    // Offset Coordinates: "Odd-r" horizontal layout (แถวคี่/คู่ เยื้องไม่เหมือนกัน)
+    // --- Helper คำนวณทิศทาง ---
     public int[] getNeighbor(int row, int col, String direction) {
-        // ทิศทาง: up, upright, downright, down, downleft, upleft
-        // ตรวจสอบว่าเป็นแถวคู่หรือคี่
-        int[][] directions;
-        if (row % 2 != 0) { // แถวคี่ (Odd)
-            directions = new int[][]{
-                    {-1, 0}, {-1, 1}, {0, 1}, {1, 0}, {0, -1}, {-1, -1}
-            };
-        } else { // แถวคู่ (Even)
-            directions = new int[][]{
-                    {-1, 0}, {-1, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1} // แก้ไขทิศให้ถูกต้องตาม Offset
-                    // หมายเหตุ: สูตร Offset Hexagon อาจซับซ้อน ปรับตามความเหมาะสม
-                    // ชุดนี้คือมาตรฐาน Odd-r:
-                    // Odd: (-1,0), (-1,+1), (0,+1), (+1,0), (+1,-1), (0,-1) -> (ไม่ตรงชื่อทิศเป๊ะๆ ต้อง map เอา)
-            };
-        }
-
-        // Mapping ชื่อทิศ -> index array
-        int idx = switch (direction) {
-            case "up" -> 0;
-            case "upright" -> 1;
-            case "downright" -> 2;
-            case "down" -> 3;
-            case "downleft" -> 4;
-            case "upleft" -> 5;
-            default -> -1;
-        };
-
-        if (idx == -1) return new int[]{row, col};
-
-        // เพื่อความชัวร์ ใช้ Logic แบบเจาะจงเลยดีกว่า (Odd-r Shove)
         int dRow = 0, dCol = 0;
         boolean isOdd = (row % 2 != 0);
 
@@ -115,7 +91,6 @@ public class GameState {
             case "downleft":  dRow = 1; dCol = isOdd ? -1 : 0; break;
             case "downright": dRow = 1; dCol = isOdd ? 0 : 1; break;
         }
-
         return new int[]{row + dRow, col + dCol};
     }
 
@@ -123,21 +98,41 @@ public class GameState {
         return r >= 1 && r <= rows && c >= 1 && c <= cols;
     }
 
-    public Hex getHex(int r, int c) {
-        if (isValidHex(r, c)) return board[r][c];
-        return null;
+    // --- Turn Management ---
+    public int getTurnCount() { return turnCount; }
+    public void nextTurn() { turnCount++; }
+    public boolean isGameOver() { return turnCount > maxTurns; }
+
+    // --- Spawn Helper Methods (ใช้โดย GameService) ---
+
+    // 1. เช็คเงื่อนไขก่อน Spawn (ไม่หักเงิน)
+    public boolean canSpawn(Player player, int row, int col) {
+        if (!isValidHex(row, col)) return false;
+        Hex target = board[row][col];
+
+        // 1. ต้องเป็นที่ของตัวเอง
+        if (target.getOwner() != player) return false;
+        // 2. ต้องไม่มีตัวอื่นยืนอยู่
+        if (target.getOccupant() != null) return false;
+        // 3. โควต้าการ Spawn ต้องไม่เกิน
+        if (spawnCounts.getOrDefault(player.getId(), 0) >= maxSpawns) return false;
+
+        return true;
     }
 
-    // --- Getters (ต้องมี เพื่อให้ส่ง JSON ไปหน้าเว็บได้) ---
-    public Hex[][] getBoard() {
-        return board;
+    // 2. วาง Minion ลงกระดานจริง (หลังจาก GameService หักเงินและสร้างตัวแล้ว)
+    public void placeMinion(Player player, Minion minion, int row, int col) {
+        Hex target = board[row][col];
+        player.addMinion(minion);
+        target.setOccupant(minion);
+
+        // อัปเดตจำนวนที่ Spawn ไปแล้ว
+        int currentCount = spawnCounts.getOrDefault(player.getId(), 0);
+        spawnCounts.put(player.getId(), currentCount + 1);
     }
 
-    public Player getPlayer(int id) {
-        return players.get(id);
-    }
-
-    public Map<Integer, Player> getPlayers() {
-        return players;
-    }
+    // --- Getters ---
+    public Hex[][] getBoard() { return board; }
+    public Player getPlayer(int id) { return players.get(id); }
+    public Map<Integer, Player> getPlayers() { return players; }
 }
