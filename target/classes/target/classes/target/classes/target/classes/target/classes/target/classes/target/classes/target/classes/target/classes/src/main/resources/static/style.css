@@ -208,9 +208,6 @@ body {
     z-index: 20;
 }
 
-.hex-cell.p1-owned { background-color: #3498db; }
-.hex-cell.p2-owned { background-color: #e74c3c; }
-
 .hex-cell.spawnable {
     background-color: #f1c40f;
     opacity: 0.8;
