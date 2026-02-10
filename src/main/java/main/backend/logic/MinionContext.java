@@ -28,7 +28,7 @@ public class MinionContext {
 
     public long getVariable(String name) {
         // 1. เช็คตัวแปรระบบ (Reserved Words)
-        if (name.equals("Budget")) return minion.getOwner().getBudget();
+        if (name.equals("Budget")) return (long) minion.getOwner().getBudget();
         if (name.equals("row")) return minion.getRow();
         if (name.equals("col")) return minion.getCol();
         if (name.equals("int")) return (long) (minion.getOwner().getBudget() * configInterest()); // ต้องแก้ให้ดึงสูตรดอกเบี้ยจริง
