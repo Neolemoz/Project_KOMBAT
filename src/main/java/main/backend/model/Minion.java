@@ -15,6 +15,7 @@ public class Minion {
     private Node strategyAST;
     private String name;
 
+
     // --- Constructor แบบที่ 1: รับครบ 6 ค่า (ใช้ตอนสร้างจาก MinionType) ---
     public Minion(Player owner, int row, int col, int maxHp, int defense, String name) {
         this.owner = owner;

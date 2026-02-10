@@ -2,6 +2,10 @@ package main.backend.model;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+
+
 
 public class GameState {
     private Hex[][] board;
@@ -15,6 +19,9 @@ public class GameState {
     private int maxSpawns;
     private long spawnCost;
     private long initHp; // ค่า HP เริ่มต้น (อาจเก็บไว้ใช้เป็น Default หรืออ้างอิง)
+
+    private Set<String> spawnableHexesP1 = new HashSet<>();
+    private Set<String> spawnableHexesP2 = new HashSet<>();
 
     // เก็บจำนวน minion ที่ spawn ไปแล้วของแต่ละคน
     private Map<Integer, Integer> spawnCounts = new HashMap<>();
@@ -43,19 +50,43 @@ public class GameState {
                 board[i][j] = new Hex(i, j);
             }
         }
+        // กำหนดพื้นที่ Spawn เริ่มต้นตาม Spec (หน้า 3 ภาพประกอบ)
+        // Player 1: มุมซ้ายบน (1,1), (1,2), (1,3), (2,1), (2,2)
+        spawnableHexesP1.add("1,1"); spawnableHexesP1.add("1,2"); spawnableHexesP1.add("1,3");
+        spawnableHexesP1.add("2,1"); spawnableHexesP1.add("2,2");
+
+        // Player 2: มุมขวาล่าง (8,8), (8,7), (8,6), (7,8), (7,7)
+        spawnableHexesP2.add("8,8"); spawnableHexesP2.add("8,7"); spawnableHexesP2.add("8,6");
+        spawnableHexesP2.add("7,8"); spawnableHexesP2.add("7,7");
+
     }
 
     // --- Logic การซื้อพื้นที่ ---
     public boolean buyHex(Player player, int row, int col, long cost) {
         if (!isValidHex(row, col)) return false;
-
         Hex target = board[row][col];
-        if (target.getOwner() != null) return false; // มีเจ้าของแล้ว
+        if (target.getOwner() != null) return false;
 
-        // TODO: เพิ่ม logic เช็คว่าติดกับพื้นที่ตัวเองหรือไม่ (Adjacency Check) ตามกติกาจริง
+        // เช็คว่าติดกับพื้นที่ Spawn เดิมของตัวเองหรือไม่
+        Set<String> mySpawnables = (player.getId() == 1) ? spawnableHexesP1 : spawnableHexesP2;
+        boolean isAdjacent = false;
+
+        // ทิศทางทั้ง 6
+        String[] dirs = {"up", "down", "upleft", "upright", "downleft", "downright"};
+        for (String d : dirs) {
+            int[] neighbor = getNeighbor(row, col, d);
+            if (mySpawnables.contains(neighbor[0] + "," + neighbor[1])) {
+                isAdjacent = true;
+                break;
+            }
+        }
+
+        if (!isAdjacent) return false; // ไม่ติดกับพื้นที่ Spawn เดิม ซื้อไม่ได้
 
         if (player.spend(cost)) {
             target.setOwner(player);
+            // พื้นที่ที่ซื้อใหม่ กลายเป็นจุด Spawn ได้ด้วย
+            mySpawnables.add(row + "," + col);
             return true;
         }
         return false;
@@ -115,13 +146,13 @@ public class GameState {
     // 1. เช็คเงื่อนไขก่อน Spawn (ไม่หักเงิน)
     public boolean canSpawn(Player player, int row, int col) {
         if (!isValidHex(row, col)) return false;
-        Hex target = board[row][col];
 
-        // 1. ต้องเป็นที่ของตัวเอง
-        if (target.getOwner() != player) return false;
-        // 2. ต้องไม่มีตัวอื่นยืนอยู่
+        // ต้องอยู่ใน Set พื้นที่ Spawn ของตัวเอง
+        Set<String> mySpawnables = (player.getId() == 1) ? spawnableHexesP1 : spawnableHexesP2;
+        if (!mySpawnables.contains(row + "," + col)) return false;
+
+        Hex target = board[row][col];
         if (target.getOccupant() != null) return false;
-        // 3. โควต้าการ Spawn ต้องไม่เกิน
         if (spawnCounts.getOrDefault(player.getId(), 0) >= maxSpawns) return false;
 
         return true;

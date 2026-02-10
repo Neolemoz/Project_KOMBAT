@@ -120,13 +120,34 @@ public class Parser {
     }
 
     private ExpressionNode parseTerm() {
-        String t = consume();
+        String t = peek();
+
+        // --- เพิ่มส่วนนี้สำหรับ InfoExpression ---
+        if (t.equals("ally")) {
+            consume();
+            return new InfoExpressionNode("ally", null);
+        } else if (t.equals("opponent")) {
+            consume();
+            return new InfoExpressionNode("opponent", null);
+        } else if (t.equals("nearby")) {
+            consume();
+            String dir = consume(); // ต้องตามด้วยทิศทางเสมอ เช่น nearby up
+            return new InfoExpressionNode("nearby", dir);
+        }
+        // -------------------------------------
+
+        // Logic เดิม
+        t = consume();
         if (t.matches("\\d+")) {
             return new NumberNode(Long.parseLong(t));
         } else if (t.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
             return new VariableNode(t);
+        } else if (t.equals("(")) { // รองรับวงเล็บ (Expression)
+            ExpressionNode node = parseExpression();
+            consume(")");
+            return node;
         }
-        throw new RuntimeException("Unexpected token in expression: " + t);
+        throw new RuntimeException("Unexpected token: " + t);
     }
 
     // --- Helpers ---

@@ -116,4 +116,114 @@ public class StrategyEvaluator {
             return 0;
         }
     }
+
+    // ในไฟล์ StrategyEvaluator.java เพิ่ม static method หรือ instance method
+
+    public static long calculateInfo(MinionContext ctx, String type, String direction) {
+        Minion me = ctx.getMinion();
+        GameState gs = ctx.getGameState();
+
+        if (type.equals("nearby")) {
+            return calculateNearby(gs, me, direction);
+        } else if (type.equals("opponent")) {
+            return calculateClosest(gs, me, false); // false = หาศัตรู
+        } else if (type.equals("ally")) {
+            return calculateClosest(gs, me, true);  // true = หาพวกเดียวกัน
+        }
+        return 0;
+    }
+
+    private static long calculateNearby(GameState gs, Minion me, String direction) {
+        int r = me.getRow();
+        int c = me.getCol();
+        int dist = 0;
+
+        // เดินไปในทิศทางนั้นเรื่อยๆ จนกว่าจะเจอ Minion หรือตกขอบ
+        while (true) {
+            int[] next = gs.getNeighbor(r, c, direction);
+            r = next[0];
+            c = next[1];
+            dist++;
+
+            if (!gs.isValidHex(r, c)) return 0; // ตกขอบ ไม่เจอใคร
+
+            Hex h = gs.getHex(r, c);
+            if (h.getOccupant() != null) {
+                Minion target = h.getOccupant();
+                // สูตร: 100x + 10y + z
+                long x = String.valueOf(target.getHp()).length();     // จำนวนหลัก HP
+                long y = String.valueOf(target.getDefense()).length(); // จำนวนหลัก Defense
+                long z = dist;
+
+                long val = 100*x + 10*y + z;
+
+                // ถ้าเป็นพวกเดียวกัน คืนค่าติดลบ
+                if (target.getOwner() == me.getOwner()) {
+                    return -val;
+                } else {
+                    return val;
+                }
+            }
+        }
+    }
+
+    private static long calculateClosest(GameState gs, Minion me, boolean findAlly) {
+        long bestValue = 0;
+        int minDistance = Integer.MAX_VALUE;
+
+        // Mapping ทิศทางและรหัสตัวเลขตาม Diagram หน้า 6
+        // Index 1..6 ตรงกับค่า Direction ที่ต้องคืน
+        // 1=up, 2=upright, 3=downright, 4=down, 5=downleft, 6=upleft
+        String[] directions = {null, "up", "upright", "downright", "down", "downleft", "upleft"};
+
+        // วนลูปตรวจสอบทั้ง 6 ทิศทาง
+        for (int dir = 1; dir <= 6; dir++) {
+            int r = me.getRow();
+            int c = me.getCol();
+            int dist = 0;
+
+            // Ray Casting: เดินหน้าไปในทิศทางนั้นเรื่อยๆ จนกว่าจะเจอ Minion หรือตกขอบ
+            while (true) {
+                // ขยับไปช่องถัดไป
+                int[] nextPos = gs.getNeighbor(r, c, directions[dir]);
+                r = nextPos[0];
+                c = nextPos[1];
+                dist++;
+
+                // 1. ถ้าตกขอบกระดาน ให้หยุดหาในทิศนี้
+                if (!gs.isValidHex(r, c)) {
+                    break;
+                }
+
+                // 2. ถ้าเจอ Minion (สิ่งกีดขวางแรกในทิศนี้)
+                Hex hex = gs.getHex(r, c);
+                if (hex != null && hex.getOccupant() != null) {
+                    Minion target = hex.getOccupant();
+
+                    // เช็คว่าเป็นพวกเดียวกันหรือไม่ (เทียบ Object Owner หรือ ID)
+                    boolean isSameOwner = (target.getOwner() == me.getOwner());
+
+                    // ตรวจสอบว่า Minion นี้ตรงกับเงื่อนไขที่เราหาหรือไม่
+                    // (หา Ally และเจอ Ally) หรือ (หา Opponent และเจอ Opponent)
+                    if (findAlly == isSameOwner) {
+                        // เจอเป้าหมาย! ตรวจสอบว่าเป็นตัวที่ใกล้ที่สุดหรือไม่
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            // คำนวณค่าคืนกลับ: 10 * distance + direction code
+                            bestValue = (long) dist * 10 + dir;
+                        }
+                    }
+
+                    // *สำคัญ* ตามกฎการมองเห็น (Visibility):
+                    // เมื่อเจอ Minion ตัวแรกขวางอยู่ในทิศนี้ (ไม่ว่าจะใช่เป้าหมายหรือไม่)
+                    // ถือว่าบังตัวที่อยู่ด้านหลังจนมิด จึงต้องหยุดค้นหาในทิศนี้ทันที
+                    break;
+                }
+            }
+        }
+
+        // หากไม่เจอเป้าหมายเลยในทุกทิศทาง จะคืนค่า 0 (bestValue เริ่มต้นเป็น 0)
+        return bestValue;
+    }
+
 }

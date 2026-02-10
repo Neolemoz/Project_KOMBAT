@@ -128,4 +128,9 @@ public class MinionContext {
     public GameState getGameState() {
         return gameState;
     }
+
+    public long evaluateInfo(String type, String direction) {
+        // ส่งต่อไปให้ Evaluator หรือ GameState คำนวณ
+        return StrategyEvaluator.calculateInfo(this, type, direction);
+    }
 }

@@ -125,9 +125,29 @@ public class GameService {
         }
     }
 
+    // ใน GameService.java
+
     private void updatePlayerBudget(Player p) {
-        // ใช้ config long แต่ cast เป็น double หรือแก้ updateBudget ให้รับ long
-        p.updateBudget(config.get("turn_budget"), config.get("interest_pct"), gameState.getTurnCount(), config.get("max_budget"));
+        long m = p.getBudget();
+        int t = gameState.getTurnCount();
+        double r;
+
+        // สูตรจาก Spec หน้า 4
+        if (m < 1) {
+            r = 0;
+        } else {
+            double b = config.getDouble("interest_pct"); // สมมติว่าแก้ ConfigLoader ให้อ่าน double ได้
+            // r = b * log10(m) * ln(t)
+            r = b * Math.log10(m) * Math.log(t);
+        }
+
+        long interest = (long) (m * r / 100.0);
+        p.addBudget(config.get("turn_budget") + interest);
+
+        // ตรวจสอบ Max Budget
+        if (p.getBudget() > config.get("max_budget")) {
+            p.setBudget(config.get("max_budget"));
+        }
     }
 
     public boolean buyHex(int playerId, int row, int col) {
