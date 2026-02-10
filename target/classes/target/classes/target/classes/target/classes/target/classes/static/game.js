@@ -54,21 +54,39 @@ function renderGrid(board) {
     for (let r = 1; r <= 8; r++) {
         for (let c = 1; c <= 8; c++) {
             const hex = board[r][c];
+            if (!hex) continue; // ข้ามถ้าไม่มีข้อมูล
+
             const cell = document.createElement("div");
             cell.className = "hex-cell";
             cell.title = `Row: ${r}, Col: ${c}`;
 
+            // --- ส่วนที่เพิ่มใหม่: เช็คว่าใครเป็นเจ้าของพื้นที่ (ไม่ต้องมี Minion ก็ขึ้นสี) ---
+            if (hex.owner) {
+                // เช็คว่า backend ส่งมาเป็น object (ที่มี .id) หรือตัวเลข id เพียวๆ
+                const ownerId = (typeof hex.owner === 'object') ? hex.owner.id : hex.owner;
+
+                if (ownerId === 1) {
+                    cell.classList.add("owned-p1"); // ใส่สี P1
+                } else if (ownerId === 2) {
+                    cell.classList.add("owned-p2"); // ใส่สี P2
+                }
+            }
+            // ------------------------------------------------------------------
+
+            // วาด Minion (ถ้ามี)
             if (hex.occupant) {
                 const m = hex.occupant;
                 const minionDiv = document.createElement("div");
                 minionDiv.className = `minion p${m.owner.id}`;
                 minionDiv.innerText = m.hp;
                 cell.appendChild(minionDiv);
-                cell.classList.add(m.owner.id === 1 ? "p1-owned" : "p2-owned");
-            } else if (hex.spawnable) {
+            }
+            // แสดงพื้นที่ที่ Spawn ได้ (ถ้ายังไม่ถูกซื้อ)
+            else if (hex.spawnable) {
                 cell.classList.add("spawnable");
             }
 
+            // คลิกเพื่อซื้อพื้นที่ (Hardcode ไว้ว่าเป็น Player 1 ซื้อ)
             cell.onclick = () => buyHex(1, r, c);
             grid.appendChild(cell);
         }
@@ -77,15 +95,39 @@ function renderGrid(board) {
 
 // ฟังก์ชันซื้อพื้นที่
 function buyHex(playerId, row, col) {
-    fetch(`${API_URL}/buy?playerId=${playerId}&row=${row}&col=${col}`, { method: "POST" })
-        .then(response => response.text())
-        .then(result => {
-            if (result === "SUCCESS") {
-                log(`P${playerId} bought hex at (${row}, ${col})`);
-                updateBoard();
+    // 1. แสดง Popup ยืนยัน
+    const isConfirmed = confirm(`คุณต้องการซื้อพื้นที่พิกัด (${row}, ${col}) หรือไม่?`);
+
+    // ถ้าผู้เล่นกด "Cancel" หรือ "ยกเลิก" ให้หยุดการทำงานทันที
+    if (!isConfirmed) {
+        return;
+    }
+
+    // 2. ถ้ากด "OK" ให้ส่งคำสั่งซื้อไปที่ Backend
+    fetch(`${API_URL}/buy`, {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        // ส่งข้อมูลเป็น JSON Body เพื่อให้ตรงกับ GameController (@RequestBody)
+        body: JSON.stringify({
+            row: row,
+            col: col
+        })
+    })
+        .then(response => response.json()) // รับค่า true/false กลับมา
+        .then(success => {
+            if (success) {
+                log(`Success: Bought hex at (${row}, ${col})`);
+                updateBoard(); // โหลดกระดานใหม่เพื่อแสดงพื้นที่ที่ซื้อแล้ว
             } else {
-                log("Cannot buy this hex!");
+                log("Failed: Cannot buy this hex!");
+                alert("ไม่สามารถซื้อพื้นที่นี้ได้! (เงินไม่พอ หรือ ไม่ติดกับพื้นที่เดิม)");
             }
+        })
+        .catch(err => {
+            console.error("Error buying hex:", err);
+            log("Error occurred while buying.");
         });
 }
 

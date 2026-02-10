@@ -195,7 +195,7 @@ body {
     position: relative;
     font-size: 10px;
     color: rgba(0,0,0,0.3);
-    transition: all 0.2s;
+    transition: background-color 0.3s; /* ให้สีค่อยๆ เปลี่ยนสวยๆ */
 }
 
 .hex-cell:nth-child(16n + 9) {
@@ -207,9 +207,6 @@ body {
     transform: scale(1.15);
     z-index: 20;
 }
-
-.hex-cell.p1-owned { background-color: #3498db; }
-.hex-cell.p2-owned { background-color: #e74c3c; }
 
 .hex-cell.spawnable {
     background-color: #f1c40f;
@@ -348,4 +345,18 @@ body {
     height: auto;
     left: auto;
     top: auto;
+}
+
+/* สีพื้นที่ของ Player 1 */
+.hex-cell.owned-p1 {
+    background-color: rgba(255, 99, 71, 0.6) !important; /* ปรับความเข้มเป็น 0.6 ให้เห็นชัดขึ้น */
+    border: 2px solid red;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); /* เพิ่มเงาให้ดูสวยงาม */
+}
+
+/* สีพื้นที่ของ Player 2 */
+.hex-cell.owned-p2 {
+    background-color: rgba(65, 105, 225, 0.6) !important;
+    border: 2px solid blue;
+    box-shadow: 0 0 10px rgba(0, 0, 255, 0.3);
 }

@@ -49,22 +49,34 @@ function updateBoard() {
 // ฟังก์ชันวาดกระดาน
 function renderGrid(board) {
     const grid = document.getElementById("hex-grid");
-    grid.innerHTML = ""; // เคลียร์ของเก่า
+    grid.innerHTML = "";
 
     for (let r = 1; r <= 8; r++) {
         for (let c = 1; c <= 8; c++) {
             const hex = board[r][c];
+            if (!hex) continue;
+
             const cell = document.createElement("div");
             cell.className = "hex-cell";
             cell.title = `Row: ${r}, Col: ${c}`;
 
+            // --- 1. แก้ส่วนนี้: เช็คเจ้าของพื้นที่ (Owner) ---
+            if (hex.owner) {
+                const ownerId = (typeof hex.owner === 'object') ? hex.owner.id : hex.owner;
+                // ใช้ชื่อ class ให้ตรงกับ style.css (.owned-p1)
+                if (ownerId === 1) cell.classList.add("owned-p1");
+                if (ownerId === 2) cell.classList.add("owned-p2");
+            }
+            // -------------------------------------------
+
+            // --- 2. ส่วนแสดง Minion ---
             if (hex.occupant) {
                 const m = hex.occupant;
                 const minionDiv = document.createElement("div");
+                // ตรงนี้ Minion ใช้ class แยก (p1, p2) ตาม style เดิม
                 minionDiv.className = `minion p${m.owner.id}`;
                 minionDiv.innerText = m.hp;
                 cell.appendChild(minionDiv);
-                cell.classList.add(m.owner.id === 1 ? "p1-owned" : "p2-owned");
             } else if (hex.spawnable) {
                 cell.classList.add("spawnable");
             }
@@ -77,37 +89,65 @@ function renderGrid(board) {
 
 // ฟังก์ชันซื้อพื้นที่
 function buyHex(playerId, row, col) {
-    fetch(`${API_URL}/buy?playerId=${playerId}&row=${row}&col=${col}`, { method: "POST" })
-        .then(response => response.text())
-        .then(result => {
-            if (result === "SUCCESS") {
-                log(`P${playerId} bought hex at (${row}, ${col})`);
-                updateBoard();
+    // 1. แสดง Popup ยืนยัน
+    const isConfirmed = confirm(`คุณต้องการซื้อพื้นที่พิกัด (${row}, ${col}) หรือไม่?`);
+
+    // ถ้าผู้เล่นกด "Cancel" หรือ "ยกเลิก" ให้หยุดการทำงานทันที
+    if (!isConfirmed) {
+        return;
+    }
+
+    // 2. ถ้ากด "OK" ให้ส่งคำสั่งซื้อไปที่ Backend
+    fetch(`${API_URL}/buy`, {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        // ส่งข้อมูลเป็น JSON Body เพื่อให้ตรงกับ GameController (@RequestBody)
+        body: JSON.stringify({
+            row: row,
+            col: col
+        })
+    })
+        .then(response => response.json()) // รับค่า true/false กลับมา
+        .then(success => {
+            if (success) {
+                log(`Success: Bought hex at (${row}, ${col})`);
+                updateBoard(); // โหลดกระดานใหม่เพื่อแสดงพื้นที่ที่ซื้อแล้ว
             } else {
-                log("Cannot buy this hex!");
+                log("Failed: Cannot buy this hex!");
+                alert("ไม่สามารถซื้อพื้นที่นี้ได้! (เงินไม่พอ หรือ ไม่ติดกับพื้นที่เดิม)");
             }
+        })
+        .catch(err => {
+            console.error("Error buying hex:", err);
+            log("Error occurred while buying.");
         });
 }
 
 // ฟังก์ชันจบเทิร์น
 function endTurn() {
-    fetch(`${API_URL}/end-turn`, { method: "POST" })
+    fetch(`${API_URL}/endturn`, { method: "POST" })
         .then(() => {
             log("Turn Ended.");
             updateBoard();
             showModal();
         })
-        .catch(err => showModal());
+        .catch(err => {
+            console.error("Error ending turn:", err);
+            showModal();
+        });
 }
 
 // ฟังก์ชันรีเซ็ตเกม
 function resetGame() {
-    fetch(`${API_URL}/reset`, { method: "POST" })
+    fetch(`${API_URL}/start`, { method: "POST" })
         .then(() => {
             closeModal();
             log("Game Restarted!");
             updateBoard();
-        });
+        })
+        .catch(err => console.error("Error resetting game:", err));
 }
 
 function showModal() {
