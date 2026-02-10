@@ -309,3 +309,43 @@ body {
     cursor: pointer;
     margin: 5px;
 }
+
+/* --- Select Mode Styles --- */
+#select-mode-screen {
+    position: relative;
+    width: 1280px;
+    height: 832px;
+    background: #FFFFFF;
+    margin: 0 auto; /* จัดกึ่งกลางเหมือนหน้า Start */
+    overflow: hidden;
+}
+
+/* สไตล์ปุ่มเลือกโหมด (คล้ายปุ่ม Start แต่จัดตำแหน่งกลาง) */
+.mode-btn-frame {
+    position: absolute;
+    width: 400px; /* ปรับความกว้างให้พอดีข้อความ */
+    height: 108px;
+    left: 440px; /* (1280 - 400) / 2 = 440 เพื่อให้อยู่กึ่งกลาง */
+    background: #E9FFE9;
+    opacity: 0.72;
+    border-radius: 167px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    display: flex;
+    justify-content: center; /* จัดข้อความให้อยู่กลางปุ่ม */
+    align-items: center;
+}
+
+.mode-btn-frame:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* ปรับตำแหน่งข้อความในปุ่มโหมด */
+.mode-btn-frame .btn-text {
+    position: static; /* ยกเลิก absolute เดิมเพื่อให้จัดกลางง่ายขึ้น */
+    width: auto;
+    height: auto;
+    left: auto;
+    top: auto;
+}

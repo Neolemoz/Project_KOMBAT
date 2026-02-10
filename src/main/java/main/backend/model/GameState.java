@@ -98,6 +98,13 @@ public class GameState {
         return r >= 1 && r <= rows && c >= 1 && c <= cols;
     }
 
+    public Hex getHex(int row, int col) {
+        if (isValidHex(row, col)) {
+            return board[row][col];
+        }
+        return null;
+    }
+
     // --- Turn Management ---
     public int getTurnCount() { return turnCount; }
     public void nextTurn() { turnCount++; }

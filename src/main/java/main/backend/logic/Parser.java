@@ -1,4 +1,4 @@
-package main.backend.logic; // ตรวจสอบชื่อ Package
+package main.backend.logic;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,104 +11,107 @@ public class Parser {
         this.tokens = tokens;
     }
 
-    private String peek() {
-        if (pos >= tokens.size()) return null;
-        return tokens.get(pos);
-    }
-
-    private String consume() {
-        if (pos >= tokens.size()) return null;
-        return tokens.get(pos++);
-    }
-
-    // --- Parsing Logic ---
-
     public Node parse() {
-        // สคริปต์คือ List ของ Statement
+        // เริ่มต้น Parse คำสั่งทั้งหมดเป็น Block เดียว
         List<Node> statements = new ArrayList<>();
-        while (peek() != null) {
+        while (pos < tokens.size()) {
+            // หยุดถ้าเจอปีกกาปิดของ Block อื่น
+            if (peek().equals("}")) break;
             statements.add(parseStatement());
         }
-        return new BlockNode(statements); // คืนค่าเป็น Block ใหญ่สุด
+        return new BlockNode(statements);
     }
 
     private Node parseStatement() {
-        String t = peek();
-        if (t == null) return null;
+        String token = peek();
 
-        if (t.equals("if")) return parseIf();
-        if (t.equals("while")) return parseWhile();
-        if (t.equals("{")) return parseBlock();
-        if (t.equals("move") || t.equals("shoot") || t.equals("done")) return parseCommand();
-
-        // ถ้าไม่ใช่คำสั่งหลัก ให้ถือว่าเป็น Assignment (ตัวแปร = ค่า)
-        return parseAssignment();
+        if (token.equals("if")) {
+            return parseIf();
+        } else if (token.equals("while")) {
+            return parseWhile();
+        } else if (token.equals("{")) {
+            return parseBlock();
+        } else {
+            // เช็คว่าเป็น Assignment (x = 5) หรือ Action (move up)
+            if (pos + 1 < tokens.size() && tokens.get(pos + 1).equals("=")) {
+                return parseAssignment();
+            } else {
+                return parseAction();
+            }
+        }
     }
 
+    // --- Parsing Logic สำหรับโครงสร้างต่างๆ ---
+
     private Node parseIf() {
-        consume(); // if
-        consume(); // (
+        consume("if");
+        consume("(");
         ExpressionNode condition = parseExpression();
-        consume(); // )
-        consume(); // then
-        Node thenBlock = parseStatement();
+        consume(")");
+        Node thenBlock = parseStatement(); // หรือ parseBlock() ก็ได้ถ้าบังคับใส่ {}
         Node elseBlock = null;
-        if ("else".equals(peek())) {
-            consume(); // else
+        if (pos < tokens.size() && peek().equals("else")) {
+            consume("else");
             elseBlock = parseStatement();
         }
         return new IfStatementNode(condition, thenBlock, elseBlock);
     }
 
     private Node parseWhile() {
-        consume(); // while
-        consume(); // (
+        consume("while");
+        consume("(");
         ExpressionNode condition = parseExpression();
-        consume(); // )
+        consume(")");
         Node body = parseStatement();
         return new WhileStatementNode(condition, body);
     }
 
     private Node parseBlock() {
-        consume(); // {
+        consume("{");
         List<Node> stmts = new ArrayList<>();
-        while (!"}".equals(peek()) && peek() != null) {
+        while (!peek().equals("}")) {
             stmts.add(parseStatement());
         }
-        consume(); // }
+        consume("}");
         return new BlockNode(stmts);
     }
 
     private Node parseAssignment() {
-        String identifier = consume();
-        consume(); // =
+        String varName = consume(); // ชื่อตัวแปร
+        consume("=");
         ExpressionNode expr = parseExpression();
-        return new AssignmentNode(identifier, expr);
+        return new AssignmentNode(varName, expr);
     }
 
-    private Node parseCommand() {
-        String cmd = consume(); // move, shoot, done
-        if (cmd.equals("done")) {
-            return new ActionCommandNode("done", null, null);
+    private Node parseAction() {
+        String action = consume(); // move, shoot, done
+        String direction = "up";   // default
+        ExpressionNode expr = null; // สำหรับ shoot
+
+        // ถ้าไม่ใช่ done อาจจะมีทิศทาง
+        if (!action.equals("done") && pos < tokens.size() && !isReserved(peek())) {
+            // เช็คว่าเป็นทิศทางหรือไม่ (อย่างง่าย)
+            String next = peek();
+            if (next.matches("up|down|upleft|upright|downleft|downright")) {
+                direction = consume();
+            }
         }
 
-        String dir = consume(); // direction
-        ExpressionNode expr = null;
-
-        if (cmd.equals("shoot")) {
-            // shoot ต้องตามด้วย expression พลังงาน
+        // ถ้าเป็น shoot ต้องรับค่าพลังงานด้วย (shoot up 100)
+        if (action.equals("shoot")) {
+            // ถ้า token ถัดไปเป็นตัวเลขหรือตัวแปร
             expr = parseExpression();
         }
 
-        return new ActionCommandNode(cmd, dir, expr);
+        return new ActionCommandNode(action, direction, expr);
     }
 
-    // --- Expression Parsing (Recursive Descent) ---
-    // จัดการลำดับความสำคัญเครื่องหมาย: Term (+,-) -> Factor (*,/,%) -> Atom
-
+    // --- Expression Parsing (อย่างง่าย: ไม่มีวงเล็บซ้อนในสมการเลข) ---
+    // ถ้าต้องการสมบูรณ์กว่านี้ต้องทำ Shunting-yard หรือ Recursive Descent แยก Level
     private ExpressionNode parseExpression() {
         ExpressionNode left = parseTerm();
-        while (peek() != null && (peek().equals("+") || peek().equals("-"))) {
+
+        while (pos < tokens.size() && (peek().equals("+") || peek().equals("-") || peek().equals("*") || peek().equals("/") || peek().equals("%") || peek().equals(">") || peek().equals("<"))) {
             String op = consume();
             ExpressionNode right = parseTerm();
             left = new BinaryOpNode(left, op, right);
@@ -117,40 +120,34 @@ public class Parser {
     }
 
     private ExpressionNode parseTerm() {
-        ExpressionNode left = parseFactor();
-        while (peek() != null && (peek().equals("*") || peek().equals("/") || peek().equals("%"))) {
-            String op = consume();
-            ExpressionNode right = parseFactor();
-            left = new BinaryOpNode(left, op, right);
+        String t = consume();
+        if (t.matches("\\d+")) {
+            return new NumberNode(Long.parseLong(t));
+        } else if (t.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+            return new VariableNode(t);
         }
-        return left;
+        throw new RuntimeException("Unexpected token in expression: " + t);
     }
 
-    private ExpressionNode parseFactor() {
-        String t = peek();
-        if (t.equals("(")) {
-            consume();
-            ExpressionNode expr = parseExpression();
-            consume(); // )
-            return expr;
-        }
-        try {
-            long val = Long.parseLong(t);
-            consume();
-            return new NumberNode(val);
-        } catch (NumberFormatException e) {
-            // ถ้าไม่ใช่ตัวเลข ก็คือตัวแปร (Variable)
-            String varName = consume();
+    // --- Helpers ---
+    private String peek() {
+        if (pos >= tokens.size()) return "";
+        return tokens.get(pos);
+    }
 
-            // กรณี nearby (sensor ที่ต้องการ direction)
-            if (varName.equals("nearby")) {
-                String dir = consume();
-                // เพื่อความง่าย ให้ Nearby เป็น Variable พิเศษ หรือจะสร้าง NearbyNode ก็ได้
-                // แต่ในที่นี้ผมจะให้ MinionContext จัดการโดยส่งเป็นชื่อ "nearby_up" ไปเลย
-                return new VariableNode("nearby_" + dir); // ต้องไปแก้ MinionContext ให้รองรับ
-            }
+    private String consume() {
+        String t = tokens.get(pos);
+        pos++;
+        return t;
+    }
 
-            return new VariableNode(varName);
+    private void consume(String expected) {
+        if (!consume().equals(expected)) {
+            throw new RuntimeException("Expected " + expected);
         }
+    }
+
+    private boolean isReserved(String t) {
+        return t.equals("if") || t.equals("else") || t.equals("while") || t.equals("}") || t.equals("done");
     }
 }

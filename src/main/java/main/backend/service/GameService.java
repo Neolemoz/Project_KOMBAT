@@ -135,11 +135,7 @@ public class GameService {
         return gameState.buyHex(p, row, col, config.get("hex_purchase_cost"));
     }
 
-    // เพิ่มฟังก์ชัน Spawn แยกต่างหาก
-    public boolean spawnMinion(int playerId, int row, int col) {
-        Player p = gameState.getPlayer(playerId);
-        return gameState.spawnMinion(p, row, col);
-    }
+
 
     public void setMinionScript(int playerId, int minionIndex, String scriptCode) {
         // (Logic เดิม)
