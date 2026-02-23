@@ -227,10 +227,28 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
       </div>
 
       {/* content */}
-      <div className="relative z-10 max-w-[1400px] mx-auto px-8 pt-6 pb-24">
-        <div className="relative min-h-[720px] flex items-center justify-center">
-          <div className="flex items-center justify-center w-full">
-            <div className="scale-125 origin-center">
+      {/* content */}
+      {/* 1. เปลี่ยนจาก max-w-[1400px] เป็น w-full เพื่อให้กินพื้นที่เต็มขอบจอ (หรือใช้ max-w-[1800px] ถ้าไม่อยากให้กว้างเกินไป) */}
+      <div className="relative z-10 w-full mx-auto px-8 pt-6 pb-24">
+        
+        {/* 2. ใช้ flex justify-between เพื่อดันของข้างในให้ห่างกันที่สุด */}
+        <div className="relative min-h-[720px] flex items-center justify-between gap-8">
+          
+          {/* ฝั่งซ้าย: P1 Panel (เอา absolute ออก) */}
+          <div className="w-[340px] z-20 shrink-0">
+            <PlayerPanel
+              player="P1"
+              active={game.activePlayer === "P1"}
+              budget={game.budgets.P1}
+              hp={game.hp.P1}
+              inventory={game.inventory.P1}
+              onShop={addInventoryItem}
+            />
+          </div>
+
+          {/* ตรงกลาง: Board (ใช้ flex-1 เพื่อให้กินพื้นที่ที่เหลือตรงกลางทั้งหมด) */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="scale-125 origin-center ml-36">
               <BoardSVG
                 rows={8}
                 cols={8}
@@ -242,18 +260,8 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
             </div>
           </div>
 
-          <div className="absolute left-8 top-1/2 -translate-y-1/2 w-[340px]">
-            <PlayerPanel
-              player="P1"
-              active={game.activePlayer === "P1"}
-              budget={game.budgets.P1}
-              hp={game.hp.P1}
-              inventory={game.inventory.P1}
-              onShop={addInventoryItem}
-            />
-          </div>
-
-          <div className="absolute right-8 top-1/2 -translate-y-1/2 w-[340px]">
+          {/* ฝั่งขวา: P2 Panel (เอา absolute ออก) */}
+          <div className="w-[340px] z-20 shrink-0">
             <PlayerPanel
               player="P2"
               active={game.activePlayer === "P2"}
@@ -263,6 +271,7 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
               onShop={addInventoryItem}
             />
           </div>
+
         </div>
       </div>
 
@@ -283,7 +292,12 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
             onClick={onBack}
             className="px-4 py-2 rounded-lg bg-black/35 border border-white/10 hover:bg-black/45"
           >
-            Back
+            <img
+              src="/back.png"
+              alt="Back"
+              className="h-10 w-auto md:h-12"
+              draggable="false"
+            />
           </button>
         </div>
       )}

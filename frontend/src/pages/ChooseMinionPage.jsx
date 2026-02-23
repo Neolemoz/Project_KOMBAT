@@ -85,7 +85,12 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
               onClick={onBack}
               className="rounded-md border border-white/30 bg-black/40 px-4 py-2 text-sm font-semibold tracking-wide text-white transition hover:border-white/60 hover:bg-black/60"
             >
-              ? Back
+              <img
+                src="/back.png"
+                alt="Back"
+                className="h-10 w-auto md:h-12"
+                draggable="false"
+              />
             </button>
           </div>
         </div>
