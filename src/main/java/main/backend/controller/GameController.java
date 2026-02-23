@@ -78,4 +78,13 @@ public class GameController {
     public int checkWinner() {
         return gameService.checkWinner();
     }
+
+    // 8. รับ Strategy Script และรัน
+    @PostMapping("/strategy")
+    public GameState submitStrategy(@RequestBody Map<String, Object> payload) {
+        int playerId = (int) payload.get("playerId");
+        String script = (String) payload.get("script");
+        gameService.setPlayerStrategy(playerId, script);
+        return gameService.getGameState();
+    }
 }

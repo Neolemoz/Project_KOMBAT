@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GameState {
     private Hex[][] board;
@@ -180,4 +182,23 @@ public class GameState {
     public int getTurnCount() { return turnCount; }
     public void nextTurn() { turnCount++; }
     public boolean isGameOver() { return turnCount > maxTurns; }
+
+    public List<Minion> getMinionsOfPlayer(int playerId) {
+        List<Minion> result = new ArrayList<>();
+        Player player = players.get(playerId);
+        if (player == null) return result;
+
+        for (int r = 1; r <= rows; r++) {
+            for (int c = 1; c <= cols; c++) {
+                Hex hex = board[r][c];
+                if (hex != null && hex.getOccupant() != null) {
+                    Minion m = hex.getOccupant();
+                    if (m.getOwner() == player) {
+                        result.add(m);
+                    }
+                }
+            }
+        }
+        return result;
+    }
 }

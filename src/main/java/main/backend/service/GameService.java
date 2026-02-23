@@ -208,4 +208,17 @@ public class GameService {
 
     public int getCurrentPlayerId() { return currentPlayerId; }
     public GameState getGameState() { return gameState; }
+    public void setPlayerStrategy(int playerId, String script) {
+        Player player = gameState.getPlayer(playerId);
+        // Parse script ด้วย Parser ที่มีอยู่แล้ว
+        List<String> tokens = new Tokenizer(script).tokenize();
+        Node strategyTree = new Parser(tokens).parse();
+
+        // รัน strategy สำหรับ minion ทุกตัวของ player นั้น
+        for (Minion minion : gameState.getMinionsOfPlayer(playerId)) {
+            StrategyEvaluator evaluator = new StrategyEvaluator();
+            MinionContext ctx = new MinionContext(minion, gameState);
+            evaluator.execute(strategyTree, ctx);
+        }
+    }
 }
