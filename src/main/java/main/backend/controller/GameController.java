@@ -5,6 +5,7 @@ import main.backend.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -86,5 +87,32 @@ public class GameController {
         String script = (String) payload.get("script");
         gameService.setPlayerStrategy(playerId, script);
         return gameService.getGameState();
+    }
+
+    @PostMapping("/validate")
+    public Map<String, Object> validateStrategy(@RequestBody Map<String, String> body) {
+        Map<String, Object> result = new HashMap<>();
+        String script = body.getOrDefault("script", "").trim();
+
+        if (script.isEmpty()) {
+            result.put("valid", false);
+            result.put("error", "Strategy script is empty");
+            return result;
+        }
+
+        try {
+            gameService.validateScript(script); // เรียก method ใน GameService
+            result.put("valid", true);
+            result.put("error", null);
+        } catch (Exception e) {
+            result.put("valid", false);
+            result.put("error", e.getMessage());
+        }
+
+        return result;
+    }
+    @GetMapping("/validate")
+    public String testValidate() {
+        return "Validate endpoint is working (use POST)";
     }
 }
