@@ -221,4 +221,11 @@ public class GameService {
             evaluator.execute(strategyTree, ctx);
         }
     }
+
+    public void validateScript(String Strategy) throws Exception {
+        // ใช้ Tokenizer + Parser ที่มีอยู่แล้ว
+        List<String> tokens = new Tokenizer(Strategy).tokenize();
+        new Parser(tokens).parse();
+        // ถ้าไม่ throw = grammar ถูก
+    }
 }

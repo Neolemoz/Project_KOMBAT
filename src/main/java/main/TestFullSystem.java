@@ -15,10 +15,12 @@ public class TestFullSystem {
         testBadScriptHandling();
         testDivisionByZero();
 
+        // ทดสอบ AI Bot ขั้นสูง
+        testAdvancedBot();
+
         System.out.println("\n=== ALL TESTS COMPLETED ===");
     }
 
-    // ... (เมธอดอื่นคงเดิม) ...
     private static void testIllegalMoves() {
         System.out.print("Test 1: Illegal Moves (Boundary/Collision)... ");
         GameState gs = new GameState(1000, 10, 10, 100, 100, 5000, 5.0);
@@ -47,7 +49,6 @@ public class TestFullSystem {
         }
     }
 
-    // --- แก้ไขตรงนี้ ---
     private static void testCombatAndDeath() {
         System.out.print("Test 3: Combat (Damage & Death)... ");
         GameState gs = new GameState(1000, 10, 10, 100, 100, 5000, 5.0);
@@ -72,8 +73,6 @@ public class TestFullSystem {
             // 3. Second Shot (Fatal)
             shooterScript = "shoot down 70";
             shooter = new Minion(p1, 10, 100, parse(shooterScript));
-
-            // *** เพิ่มบรรทัดนี้: ต้องกำหนดตำแหน่งให้ Shooter ตัวใหม่ด้วย ไม่งั้นมันจะอยู่ที่ (0,0) ***
             shooter.setPosition(1, 1);
 
             ctx = new MinionContext(shooter, gs);
@@ -113,6 +112,89 @@ public class TestFullSystem {
             System.out.println("PASSED (Handled gracefully)");
         } catch (Exception e) {
             System.out.println("FAILED (System Crashed: " + e.getMessage() + ")");
+        }
+    }
+
+    private static void testAdvancedBot() {
+        System.out.print("Test 6: Advanced Bot AI Script... ");
+
+        // สคริปต์ AI ขั้นสูง ที่ถูกปรับแก้ไวยากรณ์ (ลบ then และเปลี่ยน right เป็น upright)
+        // เพื่อให้ตรงกับกฎ Parser ของโปรเจกต์
+        String advancedScript =
+                "t = t + 1\n" +
+                        "m = 0\n" +
+                        "while (3 - m) {\n" +
+                        "  if (Budget - 100) {} else done\n" +
+                        "  opponentLoc = opponent\n" +
+                        "  if (opponentLoc / 10 - 1) {\n" +
+                        "    if (opponentLoc % 10 - 5) move downleft\n" +
+                        "    else if (opponentLoc % 10 - 4) move down\n" +
+                        "    else if (opponentLoc % 10 - 3) move downright\n" +
+                        "    else if (opponentLoc % 10 - 2) move upright\n" +
+                        "    else if (opponentLoc % 10 - 1) move upright\n" +
+                        "    else move up\n" +
+                        "  } else if (opponentLoc) {\n" +
+                        "    if (opponentLoc % 10 - 5) { cost = 10 ^ (nearby upleft % 100 + 1) if (Budget - cost) shoot upleft cost else {} }\n" +
+                        "    else if (opponentLoc % 10 - 4) { cost = 10 ^ (nearby downleft % 100 + 1) if (Budget - cost) shoot downleft cost else {} }\n" +
+                        "    else if (opponentLoc % 10 - 3) { cost = 10 ^ (nearby down % 100 + 1) if (Budget - cost) shoot down cost else {} }\n" +
+                        "    else if (opponentLoc % 10 - 2) { cost = 10 ^ (nearby downright % 100 + 1) if (Budget - cost) shoot downright cost else {} }\n" +
+                        "    else if (opponentLoc % 10 - 1) { cost = 10 ^ (nearby upright % 100 + 1) if (Budget - cost) shoot upright cost else {} }\n" +
+                        "    else { cost = 10 ^ (nearby up % 100 + 1) if (Budget - cost) shoot up cost else {} }\n" +
+                        "  } else {\n" +
+                        "    try = 0\n" +
+                        "    while (3 - try) {\n" +
+                        "      success = 1\n" +
+                        "      dir = random % 6\n" +
+                        "      if ((dir - 4) * (nearby upleft % 10 + 1) ^ 2) move upleft\n" +
+                        "      else if ((dir - 3) * (nearby downleft % 10 + 1) ^ 2) move downleft\n" +
+                        "      else if ((dir - 2) * (nearby down % 10 + 1) ^ 2) move down\n" +
+                        "      else if ((dir - 1) * (nearby downright % 10 + 1) ^ 2) move downright\n" +
+                        "      else if (dir * (nearby upright % 10 + 1) ^ 2) move upright\n" +
+                        "      else if ((nearby up % 10 + 1) ^ 2) move up\n" +
+                        "      else success = 0\n" +
+                        "      if (success) try = 3 else try = try + 1\n" +
+                        "    }\n" +
+                        "    m = m + 1\n" +
+                        "  }\n" +
+                        "}";
+
+        GameState gs = new GameState(1000, 10, 10, 100, 100, 5000, 5.0);
+        Player p1 = gs.getPlayer(1);
+
+        try {
+            // 1. ลองแยกประโยคและแปลง AST ว่าสคริปต์นี้เกิด Error หรือไม่
+            Node rootNode = parse(advancedScript);
+
+            // 2. จำลองสถานการณ์ 1: ให้เงินเยอะๆ และไม่มีศัตรู (บอทควรจะเดินสุ่ม)
+            p1.setBudget(5000);
+            Minion bot = new Minion(p1, 10, 100, rootNode);
+            gs.placeMinion(p1, bot, 5, 5);
+            MinionContext ctx = new MinionContext(bot, gs);
+
+            int startRow = bot.getRow();
+            int startCol = bot.getCol();
+            new StrategyEvaluator().execute(rootNode, ctx);
+
+            boolean didRandomMove = (bot.getRow() != startRow) || (bot.getCol() != startCol);
+
+            // 3. จำลองสถานการณ์ 2: มีเงินแค่ 50 (น้อยกว่า 100 บอทควรจะโดนคำสั่ง 'done' และไม่ขยับ)
+            p1.setBudget(50);
+            startRow = bot.getRow();
+            startCol = bot.getCol();
+            ctx = new MinionContext(bot, gs);
+            new StrategyEvaluator().execute(rootNode, ctx);
+
+            boolean didStopDueToBudget = (bot.getRow() == startRow) && (bot.getCol() == startCol);
+
+            // 4. สรุปผลลัพธ์
+            if (didRandomMove && didStopDueToBudget) {
+                System.out.println("PASSED (Parsed successfully and behaved correctly)");
+            } else {
+                System.out.println("FAILED (Moved=" + didRandomMove + ", Stopped=" + didStopDueToBudget + ")");
+            }
+
+        } catch (Exception e) {
+            System.out.println("FAILED (Syntax or execution error: " + e.getMessage() + ")");
         }
     }
 
