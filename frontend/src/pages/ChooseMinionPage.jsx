@@ -2,11 +2,11 @@ import { useState } from "react"
 import TitleBanner from "../components/TitleBanner"
 
 const MINIONS = [
-  { id: "palrose", name: "Palrose", img: "/minion-paladin.png" },
-  { id: "robolo", name: "Robolo", img: "/minion-robot.png" },
-  { id: "stony", name: "Stony", img: "/minion-assassin.png" },
-  { id: "warrior", name: "Warrior", img: "/minion-priest.png" },
-  { id: "celeb", name: "Celeb", img: "/minion-mage.png" },
+  { id: "palrose", label: "Palrose", imageUrl: "/minion-paladin.png" },
+  { id: "robolo", label: "Robolo", imageUrl: "/minion-robot.png" },
+  { id: "stony", label: "Stony", imageUrl: "/minion-assassin.png" },
+  { id: "warrior", label: "Warrior", imageUrl: "/minion-priest.png" },
+  { id: "celeb", label: "Celeb", imageUrl: "/minion-mage.png" },
 ]
 
 function toAllowedCount(minionType) {
@@ -29,7 +29,7 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
 
   const selectedNames = MINIONS
     .filter((m) => selectedMinions.includes(m.id))
-    .map((m) => m.name)
+    .map((m) => m.label)
 
   const handleCardClick = (id) => {
     setSelectedMinions((prev) => {
@@ -63,7 +63,14 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
 
   const handleContinue = () => {
     if (!selectionComplete || !p1Confirmed || !p2Confirmed) return
-    onContinue({ selectedMinions })
+    const selectedMinionObjects = MINIONS.filter((minion) =>
+      selectedMinions.includes(minion.id)
+    ).map((minion) => ({
+      id: minion.id,
+      label: minion.label,
+      imageUrl: minion.imageUrl,
+    }))
+    onContinue({ selectedMinions: selectedMinionObjects })
   }
 
   return (
@@ -124,15 +131,15 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
                       <div className="w-full rounded-xl bg-white p-2">
                         <div className="aspect-[3/4] w-full overflow-hidden rounded-lg bg-gray-100">
                           <img
-                            src={minion.img}
-                            alt={minion.name}
+                            src={minion.imageUrl}
+                            alt={minion.label}
                             className="h-full w-full object-contain"
                             draggable="false"
                           />
                         </div>
                       </div>
                       <div className="mt-3 text-center font-['Cinzel'] text-lg font-semibold tracking-wider text-amber-800">
-                        {minion.name}
+                        {minion.label}
                       </div>
                     </button>
                   )
