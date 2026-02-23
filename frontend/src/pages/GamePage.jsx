@@ -12,7 +12,6 @@ function buildEmptyBoard(rows = 8, cols = 8) {
 }
 
 function getSpawnZone(player) {
-  // 5 ช่องตามที่บรีฟ: P1 มุมซ้ายบน, P2 มุมขวาล่าง
   if (player === "P1") {
     return new Set(["1,1", "1,2", "1,3", "2,1", "2,2"])
   }
@@ -29,9 +28,7 @@ function HeaderBar({ turnNumber, activePlayer }) {
 
   return (
     <div className="w-full flex items-center justify-center pt-8">
-      <div
-        className={`arcane-pill arcane-header ${theme}`}
-      >
+      <div className={`arcane-pill arcane-header ${theme}`}>
         <div className="arcane-header-text text-lg md:text-2xl">
           TURN {turnNumber} &nbsp;&nbsp; PLAYER {activePlayer === "P1" ? "1" : "2"}
         </div>
@@ -58,7 +55,6 @@ function PlayerPanel({ player, active, budget, hp, inventory, onShop }) {
 
   return (
     <div className={`${base} ${identity} ${active ? activeGlow : lockedStyle}`}>
-      {/* LOCK overlay to block ALL clicks */}
       {!active && (
         <div className="absolute inset-0 rounded-2xl bg-black/10 cursor-not-allowed z-10" />
       )}
@@ -73,7 +69,7 @@ function PlayerPanel({ player, active, budget, hp, inventory, onShop }) {
           </div>
 
           <div
-            className={`h-10 w-10 rounded-full border border-white/15 bg-white/10 flex items-center justify-center`}
+            className="h-10 w-10 rounded-full border border-white/15 bg-white/10 flex items-center justify-center"
             title="Avatar"
           >
             <img
@@ -177,7 +173,6 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
   )
 
   const onHexClick = (row, col) => {
-    // gating แบบง่าย: คลิกได้เฉพาะ spawn zone ของ activePlayer
     if (!isInSpawnZone(game.activePlayer, row, col)) return
     setGame((g) => ({ ...g, selected: { row, col } }))
   }
@@ -204,13 +199,13 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
         ...g,
         activePlayer: nextPlayer,
         turnNumber: nextTurn,
-        selected: null, // clear selection/overlays
+        selected: null,
       }
     })
   }
 
   return (
-    <div className="min-h-screen text-white relative">
+    <div className="min-h-screen text-white relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
         <img
           src="/battle-bg.png"
@@ -226,16 +221,11 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
         <HeaderBar turnNumber={game.turnNumber} activePlayer={game.activePlayer} />
       </div>
 
-      {/* content */}
-      {/* content */}
-      {/* 1. เปลี่ยนจาก max-w-[1400px] เป็น w-full เพื่อให้กินพื้นที่เต็มขอบจอ (หรือใช้ max-w-[1800px] ถ้าไม่อยากให้กว้างเกินไป) */}
-      <div className="relative z-10 w-full mx-auto px-8 pt-6 pb-24">
-        
-        {/* 2. ใช้ flex justify-between เพื่อดันของข้างในให้ห่างกันที่สุด */}
-        <div className="relative min-h-[720px] flex items-center justify-between gap-8">
-          
-          {/* ฝั่งซ้าย: P1 Panel (เอา absolute ออก) */}
-          <div className="w-[340px] z-20 shrink-0">
+      {/* ✅ MAIN STAGE: ใช้ relative + absolute panels + center board */}
+      <div className="relative z-10 w-full px-6 md:px-10 pt-6 pb-24">
+        <div className="relative min-h-[760px] flex items-center justify-center">
+          {/* LEFT PANEL */}
+          <div className="absolute left-6 md:left-10 top-1/2 -translate-y-1/2 w-[340px] z-20">
             <PlayerPanel
               player="P1"
               active={game.activePlayer === "P1"}
@@ -246,22 +236,8 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
             />
           </div>
 
-          {/* ตรงกลาง: Board (ใช้ flex-1 เพื่อให้กินพื้นที่ที่เหลือตรงกลางทั้งหมด) */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="scale-125 origin-center ml-36">
-              <BoardSVG
-                rows={8}
-                cols={8}
-                selected={game.selected}
-                spawnZone={spawnZone}
-                activePlayer={game.activePlayer}
-                onHexClick={onHexClick}
-              />
-            </div>
-          </div>
-
-          {/* ฝั่งขวา: P2 Panel (เอา absolute ออก) */}
-          <div className="w-[340px] z-20 shrink-0">
+          {/* RIGHT PANEL */}
+          <div className="absolute right-6 md:right-10 top-1/2 -translate-y-1/2 w-[340px] z-20">
             <PlayerPanel
               player="P2"
               active={game.activePlayer === "P2"}
@@ -272,6 +248,23 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
             />
           </div>
 
+          {/* ✅ CENTER BOARD */}
+        <div className="flex items-center justify-center w-full">
+          {/* กล่องบอร์ด: จำกัดตามทั้งความกว้างและความสูงของจอ */}
+          <div className="w-[min(98vw,1500px)] h-[min(82vh,1500px)]">
+            <BoardSVG
+              rows={8}
+              cols={8}
+              size={60}        // ✅ อย่าใช้ 15; ใช้ 48–60 จะสวยและไม่เพี้ยน
+              padding={50}     // ✅ 30–50 กำลังดี
+              selected={game.selected}
+              spawnZone={spawnZone}
+              activePlayer={game.activePlayer}
+              onHexClick={onHexClick}
+              className="w-full h-full"
+            />
+          </div>
+        </div>
         </div>
       </div>
 
@@ -285,7 +278,7 @@ export default function GamePage({ onBack, minionConfigs: _minionConfigs }) {
         </button>
       </div>
 
-      {/* back (optional) */}
+      {/* back */}
       {onBack && (
         <div className="fixed bottom-6 left-6 z-20">
           <button

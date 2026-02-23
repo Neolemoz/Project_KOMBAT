@@ -1,6 +1,6 @@
 export default function TitleBanner({ title, width = 760, className = "" }) {
   return (
-    <div className={`mt-0 mb-6 flex justify-center ${className || ""}`}>
+    <div className={`flex justify-center ${className || ""}`}>
       <div className="relative" style={{ width, maxWidth: "92%" }}>
         <img
           src="/textbox.png"
