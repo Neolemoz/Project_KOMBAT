@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { defineMinionType, startGame } from "../api/gameApi"
 import TitleBanner from "../components/TitleBanner"
 import MinionSidebar from "../components/MinionSidebar"
 import StrategyForm from "../components/StrategyForm"
@@ -149,6 +150,53 @@ export default function MinionStrategyPage({
     // keep (not used after centering change, but harmless)
     const leftPx = SIDEBAR_GAP + SIDEBAR_W
 
+    const [isFinishing, setIsFinishing] = useState(false)
+    const [globalError, setGlobalError] = useState(null)
+
+    // ฟังก์ชันนี้จะทำงานเมื่อกดปุ่ม FINISH ด้านขวาล่าง
+    const handleFinishClick = async () => {
+        setIsFinishing(true)
+        setGlobalError(null)
+
+        try {
+            // 1. วนลูปตรวจสอบและสร้าง Minion ทีละชนิดตามจำนวนที่เลือกไว้
+            for (let i = 0; i < selectedMinions.length; i++) {
+                // ⚠️ แก้ไขจุดนี้: ดึง ID ของ Minion ชนิดนั้นๆ ออกมาก่อน
+                const minionId = selectedMinions[i].id
+                const config = drafts[minionId] || emptyConfig
+
+                // เช็คว่ากรอกข้อมูลครบไหม
+                if (!config.name || !config.defense || !config.strategy) {
+                    throw new Error(`Minion Type ${i + 1} is missing information!`)
+                }
+
+                // ยิง API สร้าง Minion (กำหนด HP พื้นฐานเป็น 100 ไว้ก่อน หรือจะเพิ่มช่องกรอก HP ในฟอร์มทีหลังก็ได้)
+                const hp = 100
+                const success = await defineMinionType(
+                    config.name,
+                    Number(hp),
+                    Number(config.defense),
+                    config.strategy
+                )
+
+                if (!success) {
+                    throw new Error(`Failed to create Minion: ${config.name}. Name may be duplicate or script invalid.`)
+                }
+            }
+
+            // 2. เมื่อสร้างตัวละครครบแล้ว ยิง API เริ่มเกม
+            await startGame("duel") // คุณสามารถเปลี่ยนเป็น "auto" หรือรับค่าโหมดมาจาก App.jsx ก็ได้
+
+            // 3. เปลี่ยนหน้าจอไปที่ GamePage
+            if (onFinishAll) onFinishAll(drafts)
+
+        } catch (err) {
+            setGlobalError(err.message) // แสดง Error ถ้ามี
+            alert(err.message) // เด้ง Alert แจ้งเตือนผู้เล่น
+        } finally {
+            setIsFinishing(false)
+        }
+    }
     return (
         <div className="relative min-h-screen overflow-hidden bg-[url('/mode-bg.png')] bg-cover bg-center bg-no-repeat">
             <div className="pointer-events-none absolute inset-0 bg-black/60" />
@@ -258,10 +306,11 @@ export default function MinionStrategyPage({
                 {allComplete && (
                     <button
                         type="button"
-                        onClick={() => onFinishAll?.()}
-                        className="fixed bottom-6 right-6 z-30 rounded-md border border-amber-300 bg-amber-300 px-6 py-2 text-sm font-semibold tracking-wide text-black transition hover:bg-amber-200"
+                        onClick={handleFinishClick} // 👈 เปลี่ยนจาก () => onFinishAll?.() มาเป็นฟังก์ชันนี้
+                        disabled={isFinishing}
+                        className="fixed bottom-6 right-6 z-30 rounded-md border border-amber-300 bg-amber-300 px-6 py-2 text-sm font-semibold tracking-wide text-black transition hover:bg-amber-200 disabled:opacity-50"
                     >
-                        FINISH
+                        {isFinishing ? "STARTING..." : "FINISH"}
                     </button>
                 )}
             </div>
