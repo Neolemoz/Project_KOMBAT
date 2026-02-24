@@ -1,53 +1,96 @@
 import { useState } from 'react'
+import Home from './pages/Home'
+import ModeSelectPage from './pages/ModeSelectPage'
 import MinionTypePage from './pages/MinionTypePage'
+import ChooseMinionPage from './pages/ChooseMinionPage'
 import MinionStrategyPage from './pages/MinionStrategyPage'
 import GamePage from './pages/GamePage'
 
 export default function App() {
-    // ควบคุมว่าปัจจุบันอยู่หน้าไหน: 'setup-types', 'setup-strategy', 'game'
-    const [currentScreen, setCurrentScreen] = useState('setup-types')
+    const [currentScreen, setCurrentScreen] = useState('home')
+    const [gameMode, setGameMode] = useState('DUEL')
 
-    // เก็บจำนวนช่อง Minion ที่ผู้เล่นเลือก เช่น ถ้าเลือก "III" ก็จะมี 3 ช่อง
+    // 👈 เพิ่ม state เก็บ "I", "II" ที่เลือกมาจากหน้า TypePage
+    const [selectedTypeCount, setSelectedTypeCount] = useState("I")
+
+    // เก็บรายการมินเนี่ยน (พร้อมรูปและชื่อ) ที่ส่งต่อไปหน้า Strategy
     const [selectedMinionSlots, setSelectedMinionSlots] = useState([])
-    const [finalMinions, setFinalMinions] = useState([]) // สำหรับส่งไปหน้า GamePage
+    const [finalMinions, setFinalMinions] = useState([])
 
-    // เมื่อผู้เล่นกดปุ่ม CONTINUE ในหน้า MinionTypePage
-    const handleTypeSelectContinue = (typeString) => {
-        // แปลงอักษรโรมันเป็นตัวเลข
-        const mapping = { "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5 }
-        const count = mapping[typeString] || 1
-
-        // สร้าง Array ช่องว่างๆ ตามจำนวนที่เลือก เพื่อส่งไปให้หน้า Strategy สร้างแท็บ
-        const slots = Array.from({ length: count }, (_, i) => ({
-            id: i + 1,
-            label: `Type ${i + 1}`
-        }))
-
-        setSelectedMinionSlots(slots)
-        setCurrentScreen('setup-strategy')
+    const handleStartFromHome = (action) => {
+        if (action === "DUEL") {
+            setCurrentScreen('mode-select')
+        } else if (action === "RULES") {
+            alert("Rules page is under construction!")
+        }
     }
 
-    // เมื่อผู้เล่นกรอกโค้ดเสร็จและกด FINISH ในหน้า MinionStrategyPage (API ยิงผ่านแล้ว)
+    const handleSelectMode = (mode) => {
+        setGameMode(mode)
+        setCurrentScreen('setup-types')
+    }
+
+    // เมื่อกดยืนยันในหน้าเลือกจำนวน (I, II, III...)
+    const handleTypeSelectContinue = (typeString) => {
+        setSelectedTypeCount(typeString) // เก็บจำนวนไว้
+        setCurrentScreen('choose-minions') // 👈 พาไปหน้าเลือกรูปตัวละคร แทนการไปหน้า Strategy ตรงๆ
+    }
+
+    // เมื่อกดยืนยันในหน้าเลือกรูปตัวละคร
+    const handleChooseMinionContinue = (minionObjects) => {
+        // minionObjects หน้าตาจะประมาณ [{id: 1, label: "Palrose", imageUrl: "..."}, ...]
+        setSelectedMinionSlots(minionObjects)
+        setCurrentScreen('setup-strategy') // 👈 ส่งต่อไปหน้าพิมพ์โค้ด Strategy
+    }
+
     const handleStrategyFinish = (completedDrafts) => {
-        // แปลง object drafts ให้กลายเป็น array เพื่อส่งไปแสดงเป็น Inventory ใน GamePage
         const roster = Object.values(completedDrafts)
-        setFinalMinions(roster)
+
+        // ผสมข้อมูล Strategy เข้ากับข้อมูลรูปภาพเดิม
+        const combinedRoster = roster.map((draft, index) => ({
+            ...draft,
+            imageUrl: selectedMinionSlots[index]?.imageUrl || "/minion-assassin.png"
+        }))
+
+        setFinalMinions(combinedRoster)
         setCurrentScreen('game')
     }
 
     return (
         <>
+            {currentScreen === 'home' && (
+                <Home onStart={handleStartFromHome} />
+            )}
+
+            {currentScreen === 'mode-select' && (
+                <ModeSelectPage
+                    onBack={() => setCurrentScreen('home')}
+                    onSelectMode={handleSelectMode}
+                />
+            )}
+
             {currentScreen === 'setup-types' && (
                 <MinionTypePage
-                    onBack={() => console.log('Back to main menu')}
+                    gameMode={gameMode}
+                    onBack={() => setCurrentScreen('mode-select')}
                     onConfirm={handleTypeSelectContinue}
+                />
+            )}
+
+            {/* 👈 เพิ่มเงื่อนไขหน้าจอเลือกรูปภาพตัวละคร */}
+            {currentScreen === 'choose-minions' && (
+                <ChooseMinionPage
+                    minionType={selectedTypeCount} // ส่ง I, II, III เข้าไปให้หน้านี้รู้ว่าเลือกได้กี่ตัว
+                    gameMode={gameMode}
+                    onBack={() => setCurrentScreen('setup-types')}
+                    onContinue={handleChooseMinionContinue}
                 />
             )}
 
             {currentScreen === 'setup-strategy' && (
                 <MinionStrategyPage
-                    selectedMinions={selectedMinionSlots}
-                    onBack={() => setCurrentScreen('setup-types')}
+                    selectedMinions={selectedMinionSlots} // ข้อมูลนี้จะเอาไปโชว์ในแท็บด้านข้างได้เลย
+                    onBack={() => setCurrentScreen('choose-minions')} // 👈 ปุ่มกลับให้ไปหน้าเลือกรูปภาพ
                     onFinishAll={handleStrategyFinish}
                 />
             )}
@@ -55,7 +98,8 @@ export default function App() {
             {currentScreen === 'game' && (
                 <GamePage
                     minionConfigs={finalMinions}
-                    onBack={() => setCurrentScreen('setup-types')}
+                    gameMode={gameMode}
+                    onBack={() => setCurrentScreen('home')}
                 />
             )}
         </>

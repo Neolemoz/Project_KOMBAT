@@ -159,9 +159,12 @@ export default function MinionStrategyPage({
         setGlobalError(null)
 
         try {
+            // 🌟 แก้ไข: ย้าย startGame มาไว้บรรทัดแรกสุด!
+            // เพื่อสั่งให้ Backend เคลียร์ข้อมูล Minion เก่าที่อาจค้างอยู่ออกไปก่อน
+            await startGame("duel") // (ถ้าอนาคตมีรับค่า mode จาก props ก็เปลี่ยน "duel" เป็นตัวแปร mode ได้ครับ)
+
             // 1. วนลูปตรวจสอบและสร้าง Minion ทีละชนิดตามจำนวนที่เลือกไว้
             for (let i = 0; i < selectedMinions.length; i++) {
-                // ⚠️ แก้ไขจุดนี้: ดึง ID ของ Minion ชนิดนั้นๆ ออกมาก่อน
                 const minionId = selectedMinions[i].id
                 const config = drafts[minionId] || emptyConfig
 
@@ -170,7 +173,7 @@ export default function MinionStrategyPage({
                     throw new Error(`Minion Type ${i + 1} is missing information!`)
                 }
 
-                // ยิง API สร้าง Minion (กำหนด HP พื้นฐานเป็น 100 ไว้ก่อน หรือจะเพิ่มช่องกรอก HP ในฟอร์มทีหลังก็ได้)
+                // ยิง API สร้าง Minion
                 const hp = 100
                 const success = await defineMinionType(
                     config.name,
@@ -180,19 +183,17 @@ export default function MinionStrategyPage({
                 )
 
                 if (!success) {
-                    throw new Error(`Failed to create Minion: ${config.name}. Name may be duplicate or script invalid.`)
+                    // ถ้ามาพังตรงนี้ แสดงว่าเป็นที่เรื่อง Syntax ของ Strategy แน่นอน 100%
+                    throw new Error(`Syntax Error for ${config.name}! Please check your Strategy script.`)
                 }
             }
 
-            // 2. เมื่อสร้างตัวละครครบแล้ว ยิง API เริ่มเกม
-            await startGame("duel") // คุณสามารถเปลี่ยนเป็น "auto" หรือรับค่าโหมดมาจาก App.jsx ก็ได้
-
-            // 3. เปลี่ยนหน้าจอไปที่ GamePage
+            // 2. เปลี่ยนหน้าจอไปที่ GamePage
             if (onFinishAll) onFinishAll(drafts)
 
         } catch (err) {
-            setGlobalError(err.message) // แสดง Error ถ้ามี
-            alert(err.message) // เด้ง Alert แจ้งเตือนผู้เล่น
+            setGlobalError(err.message)
+            alert(err.message)
         } finally {
             setIsFinishing(false)
         }
