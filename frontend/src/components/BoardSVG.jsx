@@ -99,14 +99,34 @@ export default function BoardSVG({
                                 <g>
                                     <circle
                                         cx={h.x}
-                                        cy={h.y + 4}
-                                        r={size * 0.45}
+                                        cy={h.y + 2}
+                                        r={size * 0.40}
                                         fill={owner === 1 ? "#f43f5e" : "#0ea5e9"}
                                         stroke="#fff"
                                         strokeWidth="2"
                                     />
-                                    <text x={h.x} y={h.y + 8} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#fff">
+                                    <text x={h.x} y={h.y + 6} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#fff">
                                         M
+                                    </text>
+
+                                    {/* 🌟 แสดงหลอดตัวเลข HP ของมินเนี่ยนแต่ละตัว 🌟 */}
+                                    <rect
+                                        x={h.x - 14}
+                                        y={h.y + size * 0.40 + 4}
+                                        width="28"
+                                        height="12"
+                                        fill="rgba(0,0,0,0.7)"
+                                        rx="4"
+                                    />
+                                    <text
+                                        x={h.x}
+                                        y={h.y + size * 0.40 + 13}
+                                        textAnchor="middle"
+                                        fontSize="9"
+                                        fontWeight="bold"
+                                        fill="#4ade80"
+                                    >
+                                        {hexData.hp}
                                     </text>
                                 </g>
                             )}

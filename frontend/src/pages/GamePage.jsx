@@ -65,8 +65,8 @@ function PlayerPanel({ player, active, budget, hp, inventory, onShop }) {
                         </div>
                     </div>
                     <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                        <div className="text-sm text-white/60">HP</div>
-                        <div className="text-2xl font-semibold text-green-400">{hp}</div>
+                        <div className="text-sm text-white/60">ALIVE MINIONS</div>
+                        <div className="mt-1 text-xl font-semibold text-sky-300">⚔️ {hp}</div>
                     </div>
                 </div>
 
@@ -143,7 +143,6 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
             for (let c = 1; c <= 8; c++) {
                 const hexData = gameState.board[r][c]
                 if (hexData) {
-                    // 🌟 แก้ไข: ดึง ownerId ให้ถูกต้องแบบ 100%
                     let hexOwnerId = null;
                     if (hexData.ownerId) hexOwnerId = hexData.ownerId;
                     else if (hexData.occupant && hexData.occupant.ownerId) hexOwnerId = hexData.occupant.ownerId;
@@ -151,7 +150,14 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
                     const hasMinion = !!hexData.occupant
 
                     if (hexOwnerId) {
-                        map.set(`${r},${c}`, { owner: Number(hexOwnerId), hasMinion: hasMinion })
+                        map.set(`${r},${c}`, {
+                            owner: Number(hexOwnerId),
+                            hasMinion: hasMinion,
+                            // 🌟 ดึงข้อมูล HP รายตัวของมินเนี่ยนมาด้วย
+                            hp: hasMinion ? hexData.occupant.hp : null,
+                            maxHp: hasMinion ? hexData.occupant.maxHp : null,
+                            name: hasMinion ? hexData.occupant.name : null
+                        })
                     }
                 }
             }
@@ -221,18 +227,32 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
             <div className="relative z-10 w-full px-6 md:px-10 pt-6 pb-24">
 
                 {/* 🌟 Popup Menu สำหรับกด Spawn หรือ ซื้อพื้นที่ 🌟 */}
-                {selectedHex && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/80 px-6 py-4 rounded-xl border border-white/20 backdrop-blur-md shadow-2xl z-50 animate-fade-in-up">
-                        <span className="text-xl font-bold text-amber-400 mr-2">HEX ({selectedHex.row}, {selectedHex.col})</span>
+                {selectedHex && (() => {
+                    const cellData = boardMap.get(`${selectedHex.row},${selectedHex.col}`)
+                    const hasMinion = cellData?.hasMinion
 
-                        <button onClick={handleSpawnMinion} className="bg-sky-600 hover:bg-sky-500 px-5 py-2 rounded-lg font-bold transition shadow-[0_0_10px_rgba(2,132,199,0.5)]">
-                            ⚔️ SPAWN
-                        </button>
-                        <button onClick={() => setSelectedHex(null)} className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg font-bold transition">
-                            CANCEL
-                        </button>
-                    </div>
-                )}
+                    return (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/80 px-6 py-4 rounded-xl border border-white/20 backdrop-blur-md shadow-2xl z-50 animate-fade-in-up">
+                            <span className="text-xl font-bold text-amber-400 mr-2">HEX ({selectedHex.row}, {selectedHex.col})</span>
+
+                            {/* ถ้าช่องนั้นมีมินเนี่ยน ให้แสดงแถบ HP แทนปุ่ม Spawn */}
+                            {hasMinion ? (
+                                <div className="flex items-center gap-3 mr-2 bg-white/10 px-4 py-1.5 rounded-lg border border-white/10">
+                                    <span className="font-semibold text-white">{cellData.name || "Minion"}</span>
+                                    <span className="font-bold text-green-400">❤️ {cellData.hp} / {cellData.maxHp}</span>
+                                </div>
+                            ) : (
+                                <button onClick={handleSpawnMinion} className="bg-sky-600 hover:bg-sky-500 px-5 py-2 rounded-lg font-bold transition shadow-[0_0_10px_rgba(2,132,199,0.5)]">
+                                    ⚔️ SPAWN
+                                </button>
+                            )}
+
+                            <button onClick={() => setSelectedHex(null)} className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg font-bold transition">
+                                CANCEL
+                            </button>
+                        </div>
+                    )
+                })()}
 
                 <div className="relative min-h-[760px] flex items-center justify-center mt-6">
                     {/* LEFT PANEL */}
@@ -241,7 +261,7 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
                             player="P1"
                             active={activePlayerId === 1}
                             budget={p1?.budget || 0}
-                            hp={p1?.totalHp || 0}
+                            hp={p1?.aliveMinionCount || 0}
                             inventory={minionConfigs}
                             onShop={handleShop}
                         />
@@ -253,7 +273,7 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
                             player="P2"
                             active={activePlayerId === 2}
                             budget={p2?.budget || 0}
-                            hp={p2?.totalHp || 0}
+                            hp={p2?.aliveMinionCount || 0}
                             inventory={minionConfigs}
                             onShop={handleShop}
                         />
