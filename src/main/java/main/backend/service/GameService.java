@@ -55,6 +55,8 @@ public class GameService {
 
         // เริ่มเกมที่ Player 1 และคิดเงินเทิร์นแรกทันที
         this.currentPlayerId = 1;
+        this.gameState.setActivePlayerId(1);
+
         startTurn(this.currentPlayerId);
     }
 
@@ -183,12 +185,14 @@ public class GameService {
             gameState.nextTurn(); // ขึ้นรอบใหม่เมื่อ P2 จบ
         }
 
+        // อัปเดตลง GameState ส่งไปให้หน้าเว็บ
+        gameState.setActivePlayerId(currentPlayerId);
+
         // 3. เริ่มเทิร์นของผู้เล่นคนถัดไป (คิดเงิน)
         if (!gameState.isGameOver()) {
             startTurn(currentPlayerId);
 
             // --- ส่วนที่เพิ่มสำหรับโหมด Solitaire ---
-            // ถ้าเล่นคนเดียว และสลับมาเป็นตาของ Player 2 (Bot) ให้รัน Bot อัตโนมัติเลย
             if ("solitaire".equals(this.gameMode) && currentPlayerId == 2) {
                 playBotTurn();
             }
@@ -206,13 +210,8 @@ public class GameService {
     }
 
     public int checkWinner() {
-        boolean p1Alive = gameState.getPlayer(1).getAliveMinionCount() > 0;
-        boolean p2Alive = gameState.getPlayer(2).getAliveMinionCount() > 0;
-
-        if (!p1Alive && !p2Alive) return 3; // เสมอ
-        if (!p1Alive) return 2;
-        if (!p2Alive) return 1;
-
+        // ให้เช็คผู้ชนะเฉพาะตอนที่เกมดำเนินไปจนถึง Turn สูงสุด (Max Turns) แล้วเท่านั้น
+        // (หรือคุณสามารถเพิ่มเงื่อนไข เลือดฐาน <= 0 ค่อยประกาศผู้ชนะทีหลังได้)
         if (gameState.isGameOver()) {
             Player p1 = gameState.getPlayer(1);
             Player p2 = gameState.getPlayer(2);
@@ -228,7 +227,8 @@ public class GameService {
 
             return 3;
         }
-        return 0; // ยังไม่จบ
+
+        return 0; // 0 แปลว่าเกมยังไม่จบ ให้เล่นต่อไปได้เรื่อยๆ
     }
 
     public int getCurrentPlayerId() { return currentPlayerId; }
