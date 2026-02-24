@@ -54,8 +54,9 @@ public class StrategyEvaluator {
     private boolean isSpecialVariable(String name) {
         // รายชื่อตัวแปรที่ห้าม Assign ค่าทับ
         return name.equals("row") || name.equals("col") || name.equals("Budget") ||
-                name.equals("int") || name.equals("maxbudget") || name.equals("random") ||
-                name.equals("ally") || name.equals("opponent") || name.equals("nearby");
+                name.equals("Int") || name.equals("MaxBudget") || name.equals("random") ||
+                name.equals("ally") || name.equals("opponent") || name.equals("nearby") ||
+                name.equals("SpawnsLeft");
     }
 
     // --- Logic การคำนวณข้อมูล (Info Expressions) ---

@@ -20,8 +20,18 @@ public class GameService {
     // เก็บสถานะว่าตาใคร (1 หรือ 2)
     private int currentPlayerId = 1;
 
+    // โหมดการเล่น: "duel", "solitaire", "auto"
+    private String gameMode = "duel";
+
+    public void setGameMode(String mode) {
+        this.gameMode = mode;
+    }
+    public String getGameMode() {
+        return gameMode;
+    }
+
     private Map<String, MinionType> definedMinionTypes = new HashMap<>();
-    private static final int MAX_MINION_TYPES = 10;
+    private static final int MAX_MINION_TYPES = 5;
 
     @Autowired
     public GameService(ConfigLoader config) {
@@ -55,26 +65,29 @@ public class GameService {
         double currentBudget = p.getBudget();
         int t = gameState.getTurnCount();
 
-        // สูตรดอกเบี้ย: r = b * log10(m) * ln(t)
-        // b = percent / 100.0 (แปลงเป็นทศนิยม)
-        double b = (double) config.get("interest_pct") / 100.0;
+        // Spec: b คือ base interest rate percentage
+        double b = (double) config.get("interest_pct");
         double r = 0;
 
-        if (currentBudget > 0 && t > 0) {
+        // Spec: ถ้างบประมาณน้อยกว่า 1 จะไม่ได้รับดอกเบี้ย
+        if (currentBudget >= 1 && t > 0) {
+            // สูตร: r = b * log10(m) * ln(t)
             r = b * Math.log10(currentBudget) * Math.log(t);
         }
 
-        // คำนวณดอกเบี้ยและรายได้ (Cast double เป็น long อย่างชัดเจน)
-        long interest = (long) (currentBudget * r);
-        long income = config.get("turn_budget") + interest;
+        // Spec: interest = m * r / 100 (ใช้ floating-point arithmetic)
+        double interest = (currentBudget * r) / 100.0;
 
-        // เพิ่มเงินให้ผู้เล่น
+        // คำนวณรายได้ทั้งหมดโดยยังคงเก็บทศนิยมไว้สะสม
+        double income = config.get("turn_budget") + interest;
+
+        // เพิ่มเงินให้ผู้เล่น (Player.java ของคุณรองรับ double อยู่แล้ว)
         p.addBudget(income);
 
         // ตรวจสอบ Max Budget
         long maxB = config.get("max_budget");
         if (p.getBudget() > maxB) {
-            p.setBudget(maxB);
+            p.setBudget(maxB); // ถ้าเกินก็ตัดยอดกลับลงมาให้เท่าลิมิต
         }
     }
 
@@ -105,8 +118,11 @@ public class GameService {
         Player p = gameState.getPlayer(playerId);
         if (!gameState.canSpawn(p, row, col)) return false;
 
-        // คำนวณราคา (defense + spawn_cost)
-        long cost = type.getDefense() + config.get("spawn_cost");
+        // เช็คว่าเป็นการวาง Minion ตัวแรกสุดของผู้เล่นคนนี้หรือไม่ (ถ้า List ว่าง = ตัวแรก)
+        boolean isFreeSpawn = p.getMinions().isEmpty();
+
+        // คำนวณราคา: ถ้าตัวแรกให้ฟรี (cost = 0) ถ้าไม่ใช่ตัวแรกให้คิดราคาตามปกติ
+        long cost = isFreeSpawn ? 0 : (type.getDefense() + config.get("spawn_cost"));
 
         if (p.spend(cost)) {
             // สร้าง Minion (ส่งค่า defense, hp เป็น long)
@@ -124,7 +140,9 @@ public class GameService {
         Player p = gameState.getPlayer(playerId);
         if (!gameState.canSpawn(p, row, col)) return false;
 
-        long cost = defense + config.get("spawn_cost");
+        // เช็คตัวแรกฟรีเช่นเดียวกัน
+        boolean isFreeSpawn = p.getMinions().isEmpty();
+        long cost = isFreeSpawn ? 0 : (defense + config.get("spawn_cost"));
 
         if (p.spend(cost)) {
             try {
@@ -167,6 +185,12 @@ public class GameService {
         // 3. เริ่มเทิร์นของผู้เล่นคนถัดไป (คิดเงิน)
         if (!gameState.isGameOver()) {
             startTurn(currentPlayerId);
+
+            // --- ส่วนที่เพิ่มสำหรับโหมด Solitaire ---
+            // ถ้าเล่นคนเดียว และสลับมาเป็นตาของ Player 2 (Bot) ให้รัน Bot อัตโนมัติเลย
+            if ("solitaire".equals(this.gameMode) && currentPlayerId == 2) {
+                playBotTurn();
+            }
         }
     }
 
@@ -228,4 +252,33 @@ public class GameService {
         new Parser(tokens).parse();
         // ถ้าไม่ throw = grammar ถูก
     }
+
+    // --- Logic สำหรับ Bot ---
+    public void playBotTurn() {
+        if (checkWinner() != 0) return; // ถ้าเกมจบแล้วไม่ต้องทำอะไร
+        Player bot = gameState.getPlayer(currentPlayerId);
+
+        // 1. Bot พยายาม Spawn Minion (วนหาช่องว่างที่สามารถ Spawn ได้)
+        boolean hasSpawned = false;
+        for (int r = 1; r <= 8 && !hasSpawned; r++) {
+            for (int c = 1; c <= 8 && !hasSpawned; c++) {
+                if (gameState.canSpawn(bot, r, c)) {
+                    if (!definedMinionTypes.isEmpty()) {
+                        // สุ่มหยิบชนิดของ Minion ที่มีอยู่ในเกมมา 1 ชนิด
+                        List<String> types = new ArrayList<>(definedMinionTypes.keySet());
+                        String randomType = types.get((int) (Math.random() * types.size()));
+
+                        // วาง Minion (ฟังก์ชันนี้จะเช็คเรื่องงบ และตัวแรกฟรีให้เองที่เราแก้ไปก่อนหน้านี้)
+                        spawnMinion(currentPlayerId, r, c, randomType);
+                        hasSpawned = true; // Spawn ตัวเดียวพอแล้วค่อยไปลุยต่อเทิร์นหน้า
+                    }
+                }
+            }
+        }
+
+        // 2. จบเทิร์นให้ Bot ทันที เพื่อประมวลผล Strategy และสลับตากลับ
+        endTurn();
+    }
+
 }
+
