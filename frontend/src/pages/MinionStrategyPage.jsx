@@ -18,7 +18,7 @@ function isFilled(value) {
 
 export default function MinionStrategyPage({
                                                selectedMinions = [],
-                                               configs = {},
+                                               configs ,
                                                onUpdateConfig,
                                                onBack,
                                                onFinishAll,
@@ -40,6 +40,7 @@ export default function MinionStrategyPage({
     useEffect(() => {
         if (!selectedMinions.length) return
         setDrafts((prev) => {
+            let isChanged = false
             const next = { ...prev }
             selectedMinions.forEach((minion) => {
                 if (!next[minion.id]) {
@@ -47,13 +48,15 @@ export default function MinionStrategyPage({
                         name: minion.label || "",
                         defense: "",
                         strategy: "",
-                        ...(configs[minion.id] || {}),
+                        ...(configs && configs[minion.id] ? configs[minion.id] : {}),
                     }
+                    isChanged = true // พบว่ามีมินเนี่ยนตัวใหม่เพิ่งถูกเพิ่ม
                 }
             })
-            return next
+            // ถ้าไม่มีอะไรเปลี่ยนแปลง ให้ return prev ตัวเดิม (แก้บั๊ก Loop เด็ดขาด)
+            return isChanged ? next : prev
         })
-    }, [configs, selectedMinions])
+    }, [selectedMinions, configs])
 
     const completionById = useMemo(() => {
         const map = {}
