@@ -9,13 +9,9 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class StrategyTest {
-
-    // ✅ เปลี่ยน path ตรงนี้ถ้าวางไฟล์ไว้ที่อื่น
     private static final String STRATEGY_FILE_PATH = "strategy.txt";
 
-    // ========================================================
-    //  HELPER: โหลด strategy จากไฟล์
-    // ========================================================
+    //โหลด strategy จากไฟล์
     static String loadStrategy(String path) {
         try {
             String content = new String(Files.readAllBytes(Paths.get(path)));
@@ -27,9 +23,7 @@ public class StrategyTest {
         }
     }
 
-    // ========================================================
-    //  HELPER: สร้าง GameState สำหรับ test
-    // ========================================================
+    // สร้าง GameState สำหรับ test
     static GameState makeGameState() {
         return new GameState(
                 10000,  // init_budget

@@ -89,6 +89,7 @@ public class GameController {
         return gameService.getGameState();
     }
 
+    // 9.เช็ค Syntax ว่าถูกต้องหรือไม่
     @PostMapping("/validate")
     public Map<String, Object> validateStrategy(@RequestBody Map<String, String> body) {
         Map<String, Object> result = new HashMap<>();
