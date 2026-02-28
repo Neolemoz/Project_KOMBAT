@@ -5,130 +5,70 @@ import main.backend.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*") // อนุญาตให้หน้าเว็บเรียกใช้ API ได้
+@CrossOrigin(origins = "*")
 public class GameController {
 
     @Autowired
     private GameService gameService;
 
-    // 1. เริ่มเกมใหม่
     @PostMapping("/start")
-    public GameState startGame(@RequestBody(required = false) Map<String, String> payload) {
+    public GameState startGame() {
         gameService.init();
-
-        // รับโหมดที่ผู้เล่นเลือกมาจาก Frontend (ถ้าไม่มีให้เป็น duel ตามปกติ)
-        if (payload != null && payload.containsKey("mode")) {
-            gameService.setGameMode(payload.get("mode"));
-        } else {
-            gameService.setGameMode("duel");
-        }
-
         return gameService.getGameState();
     }
 
-    // 2. ดึงสถานะเกมปัจจุบัน (ใช้ Polling จากหน้าเว็บ)
     @GetMapping("/state")
     public GameState getGameState() {
         return gameService.getGameState();
     }
 
-    // 3. ซื้อพื้นที่
     @PostMapping("/buy")
     public boolean buyHex(@RequestBody Map<String, Integer> payload) {
-        // รับ playerId จาก payload ที่ Frontend ส่งมา
-        int playerId = payload.get("playerId");
+        int playerId = payload.getOrDefault("playerId", gameService.getCurrentPlayerId());
         return gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
     }
 
-    // 4. วาง Minion (แบบระบุ Type)
     @PostMapping("/spawn")
     public boolean spawnMinion(@RequestBody Map<String, Object> payload) {
-        // รับ playerId จาก payload โดยต้อง cast เป็น int
-        int playerId = (int) payload.get("playerId");
+        int playerId = gameService.getCurrentPlayerId();
         int row = (int) payload.get("row");
         int col = (int) payload.get("col");
-
-        // เช็คว่าส่งมาเป็น typeName หรือ manual stats
         if (payload.containsKey("minionType")) {
-            String typeName = (String) payload.get("minionType");
-            return gameService.spawnMinion(playerId, row, col, typeName);
+            return gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
         } else {
-            // กรณีส่งค่ามาเอง (Defense + Code)
             long defense = Long.parseLong(payload.get("defense").toString());
-            String code = (String) payload.get("strategy");
-            return gameService.spawnMinion(playerId, row, col, defense, code);
+            return gameService.spawnMinion(playerId, row, col, defense, (String) payload.get("strategy"));
         }
     }
 
-    // 5. กำหนดชนิด Minion (เรียกครั้งเดียวตอนเริ่ม หรือตอน Config)
     @PostMapping("/minion_type")
     public boolean defineMinionType(@RequestBody Map<String, Object> payload) {
-        String name = (String) payload.get("name");
-        int hp = (int) payload.get("hp");
-        int defense = (int) payload.get("defense");
-        String script = (String) payload.get("script");
-
-        return gameService.defineMinionType(name, hp, defense, script);
+        return gameService.defineMinionType(
+                (String) payload.get("name"),
+                (int)    payload.get("hp"),
+                (int)    payload.get("defense"),
+                (String) payload.get("script")
+        );
     }
 
-    // 6. จบเทิร์น
     @PostMapping("/endturn")
     public GameState endTurn() {
         gameService.endTurn();
         return gameService.getGameState();
     }
 
-    // 7. ตรวจสอบผู้ชนะ
     @GetMapping("/winner")
     public int checkWinner() {
         return gameService.checkWinner();
     }
 
-    // 8. รับ Strategy Script และรัน
     @PostMapping("/strategy")
     public GameState submitStrategy(@RequestBody Map<String, Object> payload) {
-        int playerId = (int) payload.get("playerId");
-        String script = (String) payload.get("script");
-        gameService.setPlayerStrategy(playerId, script);
+        gameService.setPlayerStrategy((int) payload.get("playerId"), (String) payload.get("script"));
         return gameService.getGameState();
-    }
-
-    // 9. สั่งให้ Bot เล่นในเทิร์นปัจจุบัน (ใช้กับโหมด Auto เป็นหลัก)
-    @PostMapping("/bot_turn")
-    public GameState triggerBotTurn() {
-        gameService.playBotTurn();
-        return gameService.getGameState();
-    }
-
-    @PostMapping("/validate")
-    public Map<String, Object> validateStrategy(@RequestBody Map<String, String> body) {
-        Map<String, Object> result = new HashMap<>();
-        String script = body.getOrDefault("script", "").trim();
-
-        if (script.isEmpty()) {
-            result.put("valid", false);
-            result.put("error", "Strategy script is empty");
-            return result;
-        }
-
-        try {
-            gameService.validateScript(script); // เรียก method ใน GameService
-            result.put("valid", true);
-            result.put("error", null);
-        } catch (Exception e) {
-            result.put("valid", false);
-            result.put("error", e.getMessage());
-        }
-
-        return result;
-    }
-    @GetMapping("/validate")
-    public String testValidate() {
-        return "Validate endpoint is working (use POST)";
     }
 }

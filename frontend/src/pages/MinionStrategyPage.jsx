@@ -3,7 +3,7 @@ import { defineMinionType, startGame } from "../api/gameApi"
 import TitleBanner from "../components/TitleBanner"
 import MinionSidebar from "../components/MinionSidebar"
 import StrategyForm from "../components/StrategyForm"
-import { validateStrategy } from "../api/strategyApi"
+import { validateStrategy } from "../api/gameApi"
 
 const emptyConfig = { name: "", defense: "", strategy: "" }
 
