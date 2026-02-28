@@ -9,7 +9,7 @@ public class Hex {
     private Minion occupant = null;
 
     @JsonIgnore // เพิ่ม JsonIgnore เพื่อป้องกัน loop
-    private Player owner; // เพิ่มตัวแปรนี้
+    private Player owner;
 
     public Hex(int row, int col) {
         this.row = row;
@@ -29,4 +29,12 @@ public class Hex {
     // เพิ่มชุดนี้เข้าไปเพื่อแก้ Error "cannot find symbol setOwner"
     public Player getOwner() { return owner; }
     public void setOwner(Player owner) { this.owner = owner; }
+
+    // 🌟 เพิ่มฟังก์ชันนี้เข้าไปใหม่! เพื่อให้ Spring Boot ทราบว่าจะต้องส่ง ownerId ออกไปหน้าเว็บ
+    public Integer getOwnerId() {
+        if (this.owner != null) {
+            return this.owner.getId();
+        }
+        return null;
+    }
 }

@@ -1,113 +1,107 @@
-// frontend/src/App.jsx
-import { useState } from "react"
-import HomePage from "./pages/Home"
-import ModeSelectPage from "./pages/ModeSelectPage"
-import MinionTypePage from "./pages/MinionTypePage"
-import ChooseMinionPage from "./pages/ChooseMinionPage"
-import MinionStrategyPage from "./pages/MinionStrategyPage"
-import GamePage from "./pages/GamePage"
+import { useState } from 'react'
+import Home from './pages/Home'
+import ModeSelectPage from './pages/ModeSelectPage'
+import MinionTypePage from './pages/MinionTypePage'
+import ChooseMinionPage from './pages/ChooseMinionPage'
+import MinionStrategyPage from './pages/MinionStrategyPage'
+import GamePage from './pages/GamePage'
 
 export default function App() {
-  const [page, setPage] = useState("home")
-  const [mode, setMode] = useState(null)
-  const [minionType, setMinionType] = useState(null)
-  const [selectedMinions, setSelectedMinions] = useState([])
-  const [configsByMinionId, setConfigsByMinionId] = useState({})
-  const [minionConfigs, setMinionConfigs] = useState(null)
+    const [currentScreen, setCurrentScreen] = useState('home')
+    const [gameMode, setGameMode] = useState('DUEL')
 
-  const updateConfig = (minionId, patch) => {
-    setConfigsByMinionId((prev) => {
-      const current = prev[minionId] || {}
-      return {
-        ...prev,
-        [minionId]: { ...current, ...patch },
-      }
-    })
-  }
+    // 👈 เพิ่ม state เก็บ "I", "II" ที่เลือกมาจากหน้า TypePage
+    const [selectedTypeCount, setSelectedTypeCount] = useState("I")
 
-  if (page === "home") {
-    return <HomePage onStart={() => setPage("mode")} />
-  }
+    // เก็บรายการมินเนี่ยน (พร้อมรูปและชื่อ) ที่ส่งต่อไปหน้า Strategy
+    const [selectedMinionSlots, setSelectedMinionSlots] = useState([])
+    const [finalMinions, setFinalMinions] = useState([])
 
-  if (page === "mode") {
+    const handleStartFromHome = (action) => {
+        if (action === "DUEL") {
+            setCurrentScreen('mode-select')
+        } else if (action === "RULES") {
+            alert("Rules page is under construction!")
+        }
+    }
+
+    const handleSelectMode = (mode) => {
+        setGameMode(mode)
+        setCurrentScreen('setup-types')
+    }
+
+    // เมื่อกดยืนยันในหน้าเลือกจำนวน (I, II, III...)
+    const handleTypeSelectContinue = (typeString) => {
+        setSelectedTypeCount(typeString) // เก็บจำนวนไว้
+        setCurrentScreen('choose-minions') // 👈 พาไปหน้าเลือกรูปตัวละคร แทนการไปหน้า Strategy ตรงๆ
+    }
+
+    // เมื่อกดยืนยันในหน้าเลือกรูปตัวละคร
+    const handleChooseMinionContinue = (minionObjects) => {
+        // minionObjects หน้าตาจะประมาณ [{id: 1, label: "Palrose", imageUrl: "..."}, ...]
+        setSelectedMinionSlots(minionObjects)
+        setCurrentScreen('setup-strategy') // 👈 ส่งต่อไปหน้าพิมพ์โค้ด Strategy
+    }
+
+    const handleStrategyFinish = (completedDrafts) => {
+        const roster = Object.values(completedDrafts)
+
+        // ผสมข้อมูล Strategy เข้ากับข้อมูลรูปภาพเดิม
+        const combinedRoster = roster.map((draft, index) => ({
+            ...draft,
+            imageUrl: selectedMinionSlots[index]?.imageUrl || "/minion-assassin.png"
+        }))
+
+        setFinalMinions(combinedRoster)
+        setCurrentScreen('game')
+    }
+
     return (
-      <ModeSelectPage
-        onBack={() => setPage("home")}
-        onSelectMode={(modeKey) => {
-          setMode(modeKey)
-          setPage("minionType")
-        }}
-      />
-    )
-  }
+        <>
+            {currentScreen === 'home' && (
+                <Home onStart={handleStartFromHome} />
+            )}
 
-  if (page === "minionType") {
-    return (
-      <MinionTypePage
-        onBack={() => setPage("mode")}
-        onConfirm={(type) => {
-          setMinionType(type)
-          setPage("minionSelect")
-        }}
-      />
-    )
-  }
+            {currentScreen === 'mode-select' && (
+                <ModeSelectPage
+                    onBack={() => setCurrentScreen('home')}
+                    onSelectMode={handleSelectMode}
+                />
+            )}
 
-  if (page === "minionSelect") {
-    return (
-      <ChooseMinionPage
-        minionType={minionType}
-        onBack={() => setPage("minionType")}
-        onContinue={(payload) => {
-          setSelectedMinions(payload.selectedMinions)
-          setConfigsByMinionId({})
-          setMinionConfigs(null)
-          setPage("minionStrategy")
-        }}
-      />
-    )
-  }
+            {currentScreen === 'setup-types' && (
+                <MinionTypePage
+                    gameMode={gameMode}
+                    onBack={() => setCurrentScreen('mode-select')}
+                    onConfirm={handleTypeSelectContinue}
+                />
+            )}
 
-  if (page === "minionStrategy") {
-    return (
-      <MinionStrategyPage
-        selectedMinions={selectedMinions}
-        configs={configsByMinionId}
-        onUpdateConfig={updateConfig}
-        onBack={() => setPage("minionSelect")}
-        onFinishAll={() => {
-          const payload = selectedMinions.map((minion) => ({
-            id: minion.id,
-            label: minion.label,
-            imageUrl: minion.imageUrl,
-            config: configsByMinionId[minion.id],
-          }))
-          setMinionConfigs(payload)
-          setPage("game")
-        }}
-      />
-    )
-  }
+            {/* 👈 เพิ่มเงื่อนไขหน้าจอเลือกรูปภาพตัวละคร */}
+            {currentScreen === 'choose-minions' && (
+                <ChooseMinionPage
+                    minionType={selectedTypeCount} // ส่ง I, II, III เข้าไปให้หน้านี้รู้ว่าเลือกได้กี่ตัว
+                    gameMode={gameMode}
+                    onBack={() => setCurrentScreen('setup-types')}
+                    onContinue={handleChooseMinionContinue}
+                />
+            )}
 
-  // ✅ หน้าเกม + ปุ่ม back กลับ home (ขั้นต่ำตามที่ขอ)
-  if (page === "game") {
-    return (
-      <GamePage
-        onBack={() => setPage("minionStrategy")}
-        minionConfigs={minionConfigs}
-      />
-    )
-  }
+            {currentScreen === 'setup-strategy' && (
+                <MinionStrategyPage
+                    selectedMinions={selectedMinionSlots} // ข้อมูลนี้จะเอาไปโชว์ในแท็บด้านข้างได้เลย
+                    onBack={() => setCurrentScreen('choose-minions')} // 👈 ปุ่มกลับให้ไปหน้าเลือกรูปภาพ
+                    onFinishAll={handleStrategyFinish}
+                />
+            )}
 
-  // fallback กัน page เพี้ยน
-  return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-      <button
-        className="px-6 py-3 rounded bg-white/10 hover:bg-white/15"
-        onClick={() => setPage("home")}
-      >
-        Go Home
-      </button>
-    </div>
-  )
+            {currentScreen === 'game' && (
+                <GamePage
+                    minionConfigs={finalMinions}
+                    gameMode={gameMode}
+                    onBack={() => setCurrentScreen('home')}
+                />
+            )}
+        </>
+    )
 }

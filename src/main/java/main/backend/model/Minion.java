@@ -73,4 +73,10 @@ public class Minion {
 
     public String getName() { return name; }
     public Map<String, Long> getMemory() { return memory; }
+    public Integer getOwnerId() {
+        if (this.owner != null) {
+            return this.owner.getId();
+        }
+        return null;
+    }
 }

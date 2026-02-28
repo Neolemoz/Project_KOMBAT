@@ -1,0 +1,1 @@
+gameApi.js  นำไฟล์ strategyApi.js เดิมมาขยายร่างแล้วรวมทุกเส้นทางของ GameController ไว้ที่นี่ เพื่อไม่ให้หน้า UI ต้องมาคอยเขียน fetch หรือจำ Path เองซ้ำๆ

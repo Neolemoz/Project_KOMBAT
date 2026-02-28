@@ -23,9 +23,19 @@ public class GameState {
     private long maxBudget;
     private double interestPct;
 
+    private int activePlayerId = 1;
     private Map<Integer, Integer> spawnCounts = new HashMap<>();
     private Set<String> spawnableHexesP1 = new HashSet<>();
     private Set<String> spawnableHexesP2 = new HashSet<>();
+
+
+    //เพิ่มฟังก์ชัน Getter/Setter ไว้ด้านล่าง Constructor
+    public int getActivePlayerId() {
+        return activePlayerId;
+    }
+    public void setActivePlayerId(int activePlayerId) {
+        this.activePlayerId = activePlayerId;
+    }
 
     // อัปเดต Constructor ให้รับ maxBudget และ interestPct
     public GameState(long initBudget, int maxTurns, int maxSpawns, long spawnCost, long initHp, long maxBudget, double interestPct) {

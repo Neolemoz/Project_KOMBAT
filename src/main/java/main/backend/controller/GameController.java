@@ -18,8 +18,16 @@ public class GameController {
 
     // 1. เริ่มเกมใหม่
     @PostMapping("/start")
-    public GameState startGame() {
+    public GameState startGame(@RequestBody(required = false) Map<String, String> payload) {
         gameService.init();
+
+        // รับโหมดที่ผู้เล่นเลือกมาจาก Frontend (ถ้าไม่มีให้เป็น duel ตามปกติ)
+        if (payload != null && payload.containsKey("mode")) {
+            gameService.setGameMode(payload.get("mode"));
+        } else {
+            gameService.setGameMode("duel");
+        }
+
         return gameService.getGameState();
     }
 
@@ -32,15 +40,16 @@ public class GameController {
     // 3. ซื้อพื้นที่
     @PostMapping("/buy")
     public boolean buyHex(@RequestBody Map<String, Integer> payload) {
-        int playerId = 1; // สมมติว่าเป็น Player 1 เสมอ (ในเฟสนี้)
-        // หรือรับ playerId มาจาก payload ก็ได้
+        // รับ playerId จาก payload ที่ Frontend ส่งมา
+        int playerId = payload.get("playerId");
         return gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
     }
 
     // 4. วาง Minion (แบบระบุ Type)
     @PostMapping("/spawn")
     public boolean spawnMinion(@RequestBody Map<String, Object> payload) {
-        int playerId = 1;
+        // รับ playerId จาก payload โดยต้อง cast เป็น int
+        int playerId = (int) payload.get("playerId");
         int row = (int) payload.get("row");
         int col = (int) payload.get("col");
 
@@ -89,7 +98,13 @@ public class GameController {
         return gameService.getGameState();
     }
 
-    // 9.เช็ค Syntax ว่าถูกต้องหรือไม่
+    // 9. สั่งให้ Bot เล่นในเทิร์นปัจจุบัน (ใช้กับโหมด Auto เป็นหลัก)
+    @PostMapping("/bot_turn")
+    public GameState triggerBotTurn() {
+        gameService.playBotTurn();
+        return gameService.getGameState();
+    }
+
     @PostMapping("/validate")
     public Map<String, Object> validateStrategy(@RequestBody Map<String, String> body) {
         Map<String, Object> result = new HashMap<>();
