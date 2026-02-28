@@ -1,5 +1,8 @@
 package main.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -8,7 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GameState {
+
+    @JsonIgnore  // ซ่อน raw array — ใช้ getBoard() แบบ Map แทน
     private Hex[][] board;
+
     private Map<Integer, Player> players;
     private int rows = 8;
     private int cols = 8;
@@ -18,37 +24,53 @@ public class GameState {
     private int maxSpawns;
     private long spawnCost;
     private long initHp;
-
-    // เพิ่ม Field ใหม่ตาม Spec
     private long maxBudget;
     private double interestPct;
 
     private int activePlayerId = 1;
     private Map<Integer, Integer> spawnCounts = new HashMap<>();
+
+    @JsonIgnore
     private Set<String> spawnableHexesP1 = new HashSet<>();
+    @JsonIgnore
     private Set<String> spawnableHexesP2 = new HashSet<>();
 
+    // ── JSON ส่งออก board เป็น Map<row, Map<col, Hex>> ──
+    @JsonProperty("board")
+    public Map<Integer, Map<Integer, Hex>> getBoardAsMap() {
+        Map<Integer, Map<Integer, Hex>> result = new HashMap<>();
+        for (int r = 1; r <= rows; r++) {
+            Map<Integer, Hex> rowMap = new HashMap<>();
+            for (int c = 1; c <= cols; c++) {
+                if (board[r][c] != null) {
+                    rowMap.put(c, board[r][c]);
+                }
+            }
+            result.put(r, rowMap);
+        }
+        return result;
+    }
 
-    //เพิ่มฟังก์ชัน Getter/Setter ไว้ด้านล่าง Constructor
+    // currentPlayerId ส่งออกด้วย (frontend ใช้)
+    @JsonProperty("currentPlayerId")
     public int getActivePlayerId() {
         return activePlayerId;
     }
+
     public void setActivePlayerId(int activePlayerId) {
         this.activePlayerId = activePlayerId;
     }
 
-    // อัปเดต Constructor ให้รับ maxBudget และ interestPct
     public GameState(long initBudget, int maxTurns, int maxSpawns, long spawnCost, long initHp, long maxBudget, double interestPct) {
         this.maxTurns = maxTurns;
         this.maxSpawns = maxSpawns;
         this.spawnCost = spawnCost;
         this.initHp = initHp;
-        this.maxBudget = maxBudget;     // New
-        this.interestPct = interestPct; // New
+        this.maxBudget = maxBudget;
+        this.interestPct = interestPct;
 
         this.board = new Hex[rows + 1][cols + 1];
         this.players = new HashMap<>();
-
         this.spawnCounts.put(1, 0);
         this.spawnCounts.put(2, 0);
 
@@ -59,40 +81,36 @@ public class GameState {
     }
 
     private void initializeBoard() {
-        for (int i = 1; i <= rows; i++) {
-            for (int j = 1; j <= cols; j++) {
+        for (int i = 1; i <= rows; i++)
+            for (int j = 1; j <= cols; j++)
                 board[i][j] = new Hex(i, j);
-            }
+
+        // P1 spawn zone — set owner ทันทีเพื่อให้ frontend รู้ว่าเป็นพื้นที่ของ P1
+        int[][] p1Spawns = {{1,1},{1,2},{1,3},{2,1},{2,2}};
+        for (int[] pos : p1Spawns) {
+            spawnableHexesP1.add(pos[0] + "," + pos[1]);
+            board[pos[0]][pos[1]].setOwner(players.get(1));
         }
-        // Player 1 Spawn zones
-        spawnableHexesP1.add("1,1"); spawnableHexesP1.add("1,2"); spawnableHexesP1.add("1,3");
-        spawnableHexesP1.add("2,1"); spawnableHexesP1.add("2,2");
 
-        // Player 2 Spawn zones
-        spawnableHexesP2.add("8,8"); spawnableHexesP2.add("8,7"); spawnableHexesP2.add("8,6");
-        spawnableHexesP2.add("7,8"); spawnableHexesP2.add("7,7");
+        // P2 spawn zone — set owner ทันทีเพื่อให้ frontend รู้ว่าเป็นพื้นที่ของ P2
+        int[][] p2Spawns = {{8,8},{8,7},{8,6},{7,8},{7,7}};
+        for (int[] pos : p2Spawns) {
+            spawnableHexesP2.add(pos[0] + "," + pos[1]);
+            board[pos[0]][pos[1]].setOwner(players.get(2));
+        }
     }
 
-    // --- New Methods for Evaluator Support ---
-
-    public long getMaxBudget() {
-        return maxBudget;
-    }
+    public long getMaxBudget() { return maxBudget; }
 
     public long getRemainingSpawns(int playerId) {
         return Math.max(0, maxSpawns - spawnCounts.getOrDefault(playerId, 0));
     }
 
-    // คำนวณอัตราดอกเบี้ย (Spec หน้า 4 ข้อ 111)
-    // r = b * log10(m) * ln(t)
     public long calculateInterest(long currentBudget) {
         if (currentBudget <= 0) return 0;
-
-        // b = interestPct, m = currentBudget, t = turnCount
         double r = interestPct * Math.log10(currentBudget) * Math.log(turnCount);
-        return (long) r; // Spec บอกว่า Int variable คืนค่าเป็น percentage (integer)
+        return (long) r;
     }
-    // -----------------------------------------
 
     public boolean buyHex(Player player, int row, int col, long cost) {
         if (!isValidHex(row, col)) return false;
@@ -101,16 +119,10 @@ public class GameState {
 
         Set<String> mySpawnables = (player.getId() == 1) ? spawnableHexesP1 : spawnableHexesP2;
         boolean isAdjacent = false;
-
-        String[] directions = {"up", "down", "upleft", "upright", "downleft", "downright"};
-        for (String d : directions) {
-            int[] neighbor = getNeighbor(row, col, d);
-            if (mySpawnables.contains(neighbor[0] + "," + neighbor[1])) {
-                isAdjacent = true;
-                break;
-            }
+        for (String d : new String[]{"up","down","upleft","upright","downleft","downright"}) {
+            int[] n = getNeighbor(row, col, d);
+            if (mySpawnables.contains(n[0] + "," + n[1])) { isAdjacent = true; break; }
         }
-
         if (!isAdjacent) return false;
 
         if (player.spend(cost)) {
@@ -125,70 +137,53 @@ public class GameState {
         if (!isValidHex(row, col)) return false;
         Set<String> mySpawnables = (player.getId() == 1) ? spawnableHexesP1 : spawnableHexesP2;
         if (!mySpawnables.contains(row + "," + col)) return false;
-
-        Hex target = board[row][col];
-        if (target.getOccupant() != null) return false;
+        if (board[row][col].getOccupant() != null) return false;
         if (spawnCounts.getOrDefault(player.getId(), 0) >= maxSpawns) return false;
-
         return true;
     }
 
     public void placeMinion(Player player, Minion minion, int row, int col) {
         if (isValidHex(row, col)) {
-            Hex target = board[row][col];
+            board[row][col].setOccupant(minion);
             player.addMinion(minion);
-            target.setOccupant(minion);
             minion.setPosition(row, col);
-
-            int currentCount = spawnCounts.getOrDefault(player.getId(), 0);
-            spawnCounts.put(player.getId(), currentCount + 1);
+            spawnCounts.put(player.getId(), spawnCounts.getOrDefault(player.getId(), 0) + 1);
         }
     }
 
     public void moveMinion(Minion minion, String direction) {
-        int[] nextPos = getNeighbor(minion.getRow(), minion.getCol(), direction);
-        int r = nextPos[0];
-        int c = nextPos[1];
-
-        if (isValidHex(r, c)) {
-            Hex currentHex = board[minion.getRow()][minion.getCol()];
-            Hex nextHex = board[r][c];
-            if (nextHex.getOccupant() == null) {
-                currentHex.setOccupant(null);
-                nextHex.setOccupant(minion);
-                minion.setPosition(r, c);
-            }
+        int[] next = getNeighbor(minion.getRow(), minion.getCol(), direction);
+        int r = next[0], c = next[1];
+        if (isValidHex(r, c) && board[r][c].getOccupant() == null) {
+            board[minion.getRow()][minion.getCol()].setOccupant(null);
+            board[r][c].setOccupant(minion);
+            minion.setPosition(r, c);
         }
     }
 
     public int[] getNeighbor(int row, int col, String direction) {
         int dRow = 0, dCol = 0;
         boolean isOdd = (row % 2 != 0);
-
         switch (direction) {
             case "up":        dRow = -1; dCol = 0; break;
-            case "down":      dRow = 1; dCol = 0; break;
+            case "down":      dRow =  1; dCol = 0; break;
             case "upleft":    dRow = -1; dCol = isOdd ? -1 : 0; break;
-            case "upright":   dRow = -1; dCol = isOdd ? 0 : 1; break;
-            case "downleft":  dRow = 1; dCol = isOdd ? -1 : 0; break;
-            case "downright": dRow = 1; dCol = isOdd ? 0 : 1; break;
+            case "upright":   dRow = -1; dCol = isOdd ?  0 : 1; break;
+            case "downleft":  dRow =  1; dCol = isOdd ? -1 : 0; break;
+            case "downright": dRow =  1; dCol = isOdd ?  0 : 1; break;
         }
         return new int[]{row + dRow, col + dCol};
     }
 
-    public boolean isValidHex(int r, int c) {
-        return r >= 1 && r <= rows && c >= 1 && c <= cols;
-    }
+    public boolean isValidHex(int r, int c) { return r >= 1 && r <= rows && c >= 1 && c <= cols; }
+    public Hex getHex(int row, int col) { return isValidHex(row, col) ? board[row][col] : null; }
 
-    public Hex getHex(int row, int col) {
-        if (isValidHex(row, col)) return board[row][col];
-        return null;
-    }
+    // getRawBoard ไว้ใช้ภายใน Java เท่านั้น (ไม่ serialize)
+    @JsonIgnore
+    public Hex[][] getBoard() { return board; }
 
     public Player getPlayer(int id) { return players.get(id); }
     public Map<Integer, Player> getPlayers() { return players; }
-    public Hex[][] getBoard() { return board; }
-
     public int getTurnCount() { return turnCount; }
     public void nextTurn() { turnCount++; }
     public boolean isGameOver() { return turnCount > maxTurns; }
@@ -197,18 +192,12 @@ public class GameState {
         List<Minion> result = new ArrayList<>();
         Player player = players.get(playerId);
         if (player == null) return result;
-
-        for (int r = 1; r <= rows; r++) {
+        for (int r = 1; r <= rows; r++)
             for (int c = 1; c <= cols; c++) {
                 Hex hex = board[r][c];
-                if (hex != null && hex.getOccupant() != null) {
-                    Minion m = hex.getOccupant();
-                    if (m.getOwner() == player) {
-                        result.add(m);
-                    }
-                }
+                if (hex != null && hex.getOccupant() != null && hex.getOccupant().getOwner() == player)
+                    result.add(hex.getOccupant());
             }
-        }
         return result;
     }
 }
