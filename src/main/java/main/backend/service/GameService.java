@@ -210,40 +210,44 @@ public class GameService {
     }
 
     public int checkWinner() {
-        // ให้เช็คผู้ชนะเฉพาะตอนที่เกมดำเนินไปจนถึง Turn สูงสุด (Max Turns) แล้วเท่านั้น
-        // (หรือคุณสามารถเพิ่มเงื่อนไข เลือดฐาน <= 0 ค่อยประกาศผู้ชนะทีหลังได้)
-        if (gameState.isGameOver()) {
-            Player p1 = gameState.getPlayer(1);
-            Player p2 = gameState.getPlayer(2);
+        Player p1 = gameState.getPlayer(1);
+        Player p2 = gameState.getPlayer(2);
 
-            if (p1.getAliveMinionCount() > p2.getAliveMinionCount()) return 1;
-            if (p2.getAliveMinionCount() > p1.getAliveMinionCount()) return 2;
-
-            if (p1.getTotalHp() > p2.getTotalHp()) return 1;
-            if (p2.getTotalHp() > p1.getTotalHp()) return 2;
-
-            if (p1.getBudget() > p2.getBudget()) return 1;
-            if (p2.getBudget() > p1.getBudget()) return 2;
-
-            return 3;
+        // ตรวจสอบ elimination เฉพาะหลัง turn 1 ผ่านไปแล้ว (ทั้งสองฝ่ายมีโอกาส spawn)
+        // และต้องมี minion อย่างน้อย 1 ฝ่ายเคย spawn แล้ว ไม่งั้น turn แรกจะจบเกมทันที
+        int t = gameState.getTurnCount();
+        boolean p1EverSpawned = p1.getMinions().size() > 0;
+        boolean p2EverSpawned = p2.getMinions().size() > 0;
+        if (t >= 2 || (p1EverSpawned && p2EverSpawned)) {
+            boolean p1Dead = p1EverSpawned && p1.getAliveMinionCount() == 0;
+            boolean p2Dead = p2EverSpawned && p2.getAliveMinionCount() == 0;
+            if (p1Dead && p2Dead) return 3;
+            if (p1Dead) return 2;
+            if (p2Dead) return 1;
         }
 
-        return 0; // 0 แปลว่าเกมยังไม่จบ ให้เล่นต่อไปได้เรื่อยๆ
+        // max-turns tiebreak
+        if (gameState.isGameOver()) {
+            if (p1.getAliveMinionCount() > p2.getAliveMinionCount()) return 1;
+            if (p2.getAliveMinionCount() > p1.getAliveMinionCount()) return 2;
+            if (p1.getTotalHp() > p2.getTotalHp()) return 1;
+            if (p2.getTotalHp() > p1.getTotalHp()) return 2;
+            if (p1.getBudget() > p2.getBudget()) return 1;
+            if (p2.getBudget() > p1.getBudget()) return 2;
+            return 1; // spec tiebreak: P1 wins
+        }
+
+        return 0;
     }
 
     public int getCurrentPlayerId() { return currentPlayerId; }
     public GameState getGameState() { return gameState; }
     public void setPlayerStrategy(int playerId, String script) {
-        Player player = gameState.getPlayer(playerId);
-        // Parse script ด้วย Parser ที่มีอยู่แล้ว
+        // H-01 fix: set AST on each minion instead of executing immediately
         List<String> tokens = new Tokenizer(script).tokenize();
         Node strategyTree = new Parser(tokens).parse();
-
-        // รัน strategy สำหรับ minion ทุกตัวของ player นั้น
         for (Minion minion : gameState.getMinionsOfPlayer(playerId)) {
-            StrategyEvaluator evaluator = new StrategyEvaluator();
-            MinionContext ctx = new MinionContext(minion, gameState);
-            evaluator.execute(strategyTree, ctx);
+            minion.setStrategyAST(strategyTree);
         }
     }
 
@@ -282,4 +286,3 @@ public class GameService {
     }
 
 }
-

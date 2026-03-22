@@ -7,11 +7,9 @@ function getSpawnZone(playerStr) {
     return new Set(["8,8","8,7","8,6","7,8","7,7"])
 }
 
-// spawn zone hardcode ตรงกับ backend initializeBoard()
 const P1_SPAWN = new Set(["1,1","1,2","1,3","2,1","2,2"])
 const P2_SPAWN = new Set(["8,8","8,7","8,6","7,8","7,7"])
 
-// ตรงกับ backend getNeighbor() — odd row (1,3,5,7) shift left
 function getNeighbors(row, col) {
     const isOdd = row % 2 !== 0
     return [
@@ -24,26 +22,20 @@ function getNeighbors(row, col) {
     ].filter(([r, c]) => r >= 1 && r <= 8 && c >= 1 && c <= 8)
 }
 
-// คำนวณ hex ที่ซื้อได้ = ไม่มีเจ้าของ + ติดกับ hex ของเรา
 function computePurchasableHexes(boardMap, activePlayerId) {
     const purchasable = new Set()
-
     boardMap.forEach((data, key) => {
         if (data.owner !== activePlayerId) return
-
         const [r, c] = key.split(",").map(Number)
         for (const [nr, nc] of getNeighbors(r, c)) {
             const nKey = `${nr},${nc}`
-            if (!boardMap.has(nKey)) {
-                purchasable.add(nKey)
-            }
+            if (!boardMap.has(nKey)) purchasable.add(nKey)
         }
     })
-
     return purchasable
 }
 
-// === Component ย่อย ===
+// === Component: HeaderBar ===
 function HeaderBar({ turnNumber, activePlayer }) {
     const theme = activePlayer === "P1" ? "arcane-pill--cyan" : "arcane-pill--crimson"
     return (
@@ -57,6 +49,7 @@ function HeaderBar({ turnNumber, activePlayer }) {
     )
 }
 
+// === Component: PlayerPanel ===
 function PlayerPanel({ player, active, budget, hp, inventory, onShop }) {
     const base = "relative rounded-2xl border bg-black/30 backdrop-blur p-4 md:p-5"
     const identity = player === "P1"
@@ -146,6 +139,15 @@ function PlayerPanel({ player, active, budget, hp, inventory, onShop }) {
 export default function GamePage({ onBack, minionConfigs = [] }) {
     const [gameState, setGameState] = useState(null)
     const [selectedHex, setSelectedHex] = useState(null)
+    // เก็บ minion type ที่เลือกใน dropdown
+    const [selectedMinionType, setSelectedMinionType] = useState(minionConfigs[0]?.name || "")
+
+    // sync selectedMinionType เมื่อ minionConfigs เปลี่ยน
+    useEffect(() => {
+        if (minionConfigs.length > 0 && !selectedMinionType) {
+            setSelectedMinionType(minionConfigs[0]?.name || "")
+        }
+    }, [minionConfigs, selectedMinionType])
 
     useEffect(() => { refreshBoard() }, [])
 
@@ -167,15 +169,8 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
                 const key = `${r},${c}`
                 const hexData = gameState.board?.[r]?.[c]
 
-                // อ่าน ownerId จาก backend ก่อน
-                let ownerId = hexData?.ownerId
-                    ?? hexData?.occupant?.ownerId
-                    ?? null
+                let ownerId = hexData?.ownerId ?? hexData?.occupant?.ownerId ?? null
 
-                // ── KEY FIX ──
-                // Hex.java มี @JsonIgnore บน owner field และ getOwnerId() อาจไม่ serialize
-                // จึง fallback จาก spawn zone ที่ตรงกับ backend initializeBoard()
-                // รวมถึง hex ที่ถูก buyHex() ไปแล้ว backend ก็ควรส่ง ownerId มาด้วย
                 if (ownerId == null) {
                     if (P1_SPAWN.has(key)) ownerId = 1
                     else if (P2_SPAWN.has(key)) ownerId = 2
@@ -200,7 +195,6 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
     const activePlayerStr = activePlayerId === 1 ? "P1" : "P2"
     const spawnZone       = useMemo(() => getSpawnZone(activePlayerStr), [activePlayerStr])
 
-    // ── คำนวณ purchasable hexes (เริ่ม turn 2 เป็นต้นไป) ──
     const purchasableHexes = useMemo(() => {
         if (!gameState || gameState.turnCount < 2) return new Set()
         return computePurchasableHexes(boardMap, activePlayerId)
@@ -215,8 +209,8 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
     }
 
     const handleSpawnMinion = async () => {
-        if (!selectedHex || !gameState || minionConfigs.length === 0) return
-        const success = await spawnMinion(activePlayerId, selectedHex.row, selectedHex.col, minionConfigs[0]?.name)
+        if (!selectedHex || !gameState || !selectedMinionType) return
+        const success = await spawnMinion(activePlayerId, selectedHex.row, selectedHex.col, selectedMinionType)
         if (success) { await refreshBoard(); setSelectedHex(null) }
         else alert("Cannot spawn here! Check your budget or location.")
     }
@@ -254,30 +248,62 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
                     const cellData = boardMap.get(key)
                     const hasMinion = cellData?.hasMinion
                     const isPurchasable = purchasableHexes.has(key)
+                    const inSpawnZone = spawnZone.has(key)
+                    const canSpawn = inSpawnZone && !hasMinion
 
                     return (
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/80 px-6 py-4 rounded-xl border border-white/20 backdrop-blur-md shadow-2xl z-50">
-                            <span className="text-xl font-bold text-amber-400">HEX ({selectedHex.row},{selectedHex.col})</span>
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/80 px-6 py-4 rounded-xl border border-white/20 backdrop-blur-md shadow-2xl z-50 flex-wrap justify-center">
+                            <span className="text-xl font-bold text-amber-400">
+                                HEX ({selectedHex.row},{selectedHex.col})
+                            </span>
 
                             {hasMinion ? (
+                                /* แสดงข้อมูล minion ที่อยู่บน hex นั้น */
                                 <div className="flex items-center gap-3 bg-white/10 px-4 py-1.5 rounded-lg border border-white/10">
                                     <span className="font-semibold">{cellData.name || "Minion"}</span>
                                     <span className="font-bold text-green-400">❤️ {cellData.hp} / {cellData.maxHp}</span>
                                 </div>
-                            ) : (
+                            ) : canSpawn ? (
+                                /* อยู่ใน spawn zone และว่างอยู่ → แสดง dropdown + ปุ่ม spawn */
                                 <>
-                                    <button onClick={handleSpawnMinion} className="bg-sky-600 hover:bg-sky-500 px-5 py-2 rounded-lg font-bold transition">
+                                    <select
+                                        value={selectedMinionType}
+                                        onChange={(e) => setSelectedMinionType(e.target.value)}
+                                        className="rounded-lg bg-black/70 border border-white/30 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                    >
+                                        {minionConfigs.length > 0
+                                            ? minionConfigs.map((m, i) => (
+                                                <option key={m.name || i} value={m.name || m.label || ""}>
+                                                    {m.name || m.label || `Minion ${i + 1}`}
+                                                </option>
+                                            ))
+                                            : <option value="">— No types defined —</option>
+                                        }
+                                    </select>
+                                    <button
+                                        onClick={handleSpawnMinion}
+                                        disabled={!selectedMinionType}
+                                        className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 px-5 py-2 rounded-lg font-bold transition"
+                                    >
                                         ⚔️ SPAWN
                                     </button>
-                                    {isPurchasable && (
-                                        <button onClick={handleBuyHex} className="bg-amber-500 hover:bg-amber-400 px-5 py-2 rounded-lg font-bold transition">
-                                            💰 BUY HEX
-                                        </button>
-                                    )}
                                 </>
+                            ) : (
+                                /* ไม่ใช่ spawn zone → แสดงปุ่ม BUY HEX ถ้าซื้อได้ */
+                                isPurchasable && (
+                                    <button
+                                        onClick={handleBuyHex}
+                                        className="bg-amber-500 hover:bg-amber-400 px-5 py-2 rounded-lg font-bold transition"
+                                    >
+                                        💰 BUY HEX
+                                    </button>
+                                )
                             )}
 
-                            <button onClick={() => setSelectedHex(null)} className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg font-bold transition">
+                            <button
+                                onClick={() => setSelectedHex(null)}
+                                className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg font-bold transition"
+                            >
                                 CANCEL
                             </button>
                         </div>

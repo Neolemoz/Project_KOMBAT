@@ -1,0 +1,437 @@
+﻿* commit 83cd48767ee976fd030a98b3847d0e46bde368ed (origin/aum, aum)
+| Author: MSII <patthaveekarn2544@gmail.com>
+| Date:   Sat Feb 28 23:51:36 2026 +0700
+|
+|     buyhex
+|
+*   commit f5db175e43c2cd1f94d035238315046d2a6b659a
+|\  Merge: f184c0b d5e153b
+| | Author: MSII <patthaveekarn2544@gmail.com>
+| | Date:   Sat Feb 28 21:24:11 2026 +0700
+| |
+| |     Merge branch 'main' into aum
+| |
+| |     # Conflicts:
+| |     #       src/main/java/main/backend/controller/GameController.java
+| |     #       target/classes/main/backend/StrategyTest.class
+| |     #       target/classes/main/backend/controller/GameController.class
+| |
+| * commit d5e153b93e779afa0a90150abe2ecb3f5f4d896e (HEAD -> main, origin/main, origin/HEAD)
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 23:16:41 2026 +0700
+| |
+| |     แก้hpรวมเป็นแยกรายตัว
+| |
+| * commit de7c17d37692059dc68097d129a2790c153b00d4
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 23:02:54 2026 +0700
+| |
+| |     แก้frontendเพิ่มเติม
+| |
+| * commit 940e3af256a395600d22ac8ff538f7682684813e
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 21:37:19 2026 +0700
+| |
+| |     แก้frontendเพิ่มเติม
+| |
+| * commit a469f5f551fde2d6d470d3e6f96c2d7eb23880c0
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 20:00:46 2026 +0700
+| |
+| |     แก้frontendเพิ่มเติม
+| |
+| * commit b138ec9e25b68c2d692c4c2f523f3f227c54b258
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 19:16:47 2026 +0700
+| |
+| |     แก้ปัญหา API
+| |
+| * commit 0b8fda64ffef4f46609a163b49e263495f1c44cb
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 17:48:41 2026 +0700
+| |
+| |     แก้ปัญหา API
+| |
+| * commit 2ee0165bd45a49f0023419de58dd74cdec2dfdee
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 17:34:59 2026 +0700
+| |
+| |     แก้ให้ตรงกับ StrategyEvaluator.java
+| |
+| * commit 665c229c553dd4b8d534e18fa858df2db66c6a2e
+| | Author: MorohaZ <141795069+MorohaZ@users.noreply.github.com>
+| | Date:   Tue Feb 24 17:30:42 2026 +0700
+| |
+| |     Delete target/classes/target/classes directory
+| |
+| * commit 340160552186233f521d1e575603c5c37adb3c04
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 17:23:43 2026 +0700
+| |
+| |     แก้ลิมิต Minion:5  แก้ชื่อตัวแปรพิเศษ: (ใน StrategyEvaluator.java)  แก้ระบบ Multiplayer: (ใน GameController.java เพื่อไม่ให้ถูกจำกัดแค่ Player 1)  เพิ่มระบบเกิดฟรีตอน Setup  แก้การคำนวณดอกเบี้ย: (ให้คิดดอกเบี้ยแบบทศนิยมสะสมตาม Spec)  จัดการโหมดการเล่น / Bot (เพิ่มการรันบอทอัตโนมัติ)
+| |
+| * commit e1a4288b5a2b72d69979c0d6ec4184dd053e6cdb
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 24 17:21:22 2026 +0700
+| |
+| |     แก้ลิมิต Minion:5  แก้ชื่อตัวแปรพิเศษ: (ใน StrategyEvaluator.java)  แก้ระบบ Multiplayer: (ใน GameController.java เพื่อไม่ให้ถูกจำกัดแค่ Player 1)  เพิ่มระบบเกิดฟรีตอน Setup  แก้การคำนวณดอกเบี้ย: (ให้คิดดอกเบี้ยแบบทศนิยมสะสมตาม Spec)  จัดการโหมดการเล่น / Bot (เพิ่มการรันบอทอัตโนมัติ)
+| |
+| * commit 631c137b051b8e41a166915bee912d69b80b9c55
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Tue Feb 10 23:27:58 2026 +0700
+| |
+| |     แก้ Frontend เชื่อม api
+| |
+| * commit bb2d25cbc413ab28996f0cf80b279b56fb4f09cc
+| | Author: MorohaZ <141795069+MorohaZ@users.noreply.github.com>
+| | Date:   Tue Feb 24 15:01:39 2026 +0700
+| |
+| |     Delete target/classes directory
+| |
+| * commit 4f4433ff24891737b9bd5685c887011540aae861
+| | Author: MorohaZ <141795069+MorohaZ@users.noreply.github.com>
+| | Date:   Tue Feb 24 15:01:19 2026 +0700
+| |
+| |     Delete target/classes/target/classes/frontend directory
+| |
+| *   commit a9a893c6e5fe68e90fd1f82ed4b68b32c4d87568
+| |\  Merge: 2a58c36 3aa2bc1
+| | | Author: patthaveekarn <76035537+patthaveekarn@users.noreply.github.com>
+| | | Date:   Tue Feb 24 02:41:31 2026 +0700
+| | |
+| | |     Merge pull request #6 from Neolemoz/aum
+| | |
+| | |     api frontend to backend
+| | |
+* | | commit f184c0b091e2d46f3dd692adb2e62c433e406310
+| | | Author: MSII <patthaveekarn2544@gmail.com>
+| | | Date:   Sat Feb 28 21:17:55 2026 +0700
+| | |
+| | |     change
+| | |
+* | | commit 287ad76fe1a75286923f8a6aa671ffc807352117
+| |/  Author: MSII <patthaveekarn2544@gmail.com>
+|/|   Date:   Sat Feb 28 20:57:13 2026 +0700
+| |
+| |       chang
+| |
+* | commit 3aa2bc115d75f163d6c0ecd7f39ee33452bc3ebe
+| | Author: MSII <patthaveekarn2544@gmail.com>
+| | Date:   Tue Feb 24 02:23:26 2026 +0700
+| |
+| |     api frontend to backend
+| |
+* | commit 34e36984a4b3ec944df74fb900de194d7f18facc
+| | Author: MSII <patthaveekarn2544@gmail.com>
+| | Date:   Tue Feb 24 02:23:12 2026 +0700
+| |
+| |     api frontend to backend
+| |
+* |   commit a47428731ab1c1de1a6c2066b4b3880e00facbb6
+|\ \  Merge: 2a58c36 5bef4b7
+| |/  Author: MSII <patthaveekarn2544@gmail.com>
+|/|   Date:   Tue Feb 24 00:22:16 2026 +0700
+| |
+| |       Merge remote-tracking branch 'origin/frontend' into aum
+| |
+| |       # Conflicts:
+| |       #       target/classes/main/KombatApplication.class
+| |       #       target/classes/main/backend/controller/GameController.class
+| |       #       target/classes/main/backend/logic/ActionCommandNode.class
+| |       #       target/classes/main/backend/logic/AssignmentNode.class
+| |       #       target/classes/main/backend/logic/BinaryOpNode.class
+| |       #       target/classes/main/backend/logic/BlockNode.class
+| |       #       target/classes/main/backend/logic/ConfigLoader.class
+| |       #       target/classes/main/backend/logic/ExpressionNode.class
+| |       #       target/classes/main/backend/logic/IfStatementNode.class
+| |       #       target/classes/main/backend/logic/NumberNode.class
+| |       #       target/classes/main/backend/logic/Tokenizer.class
+| |       #       target/classes/main/backend/logic/VariableNode.class
+| |       #       target/classes/main/backend/logic/WhileStatementNode.class
+| |       #       target/classes/main/backend/model/Hex.class
+| |       #       target/classes/main/backend/model/MinionType.class
+| |
+* | commit 2a58c364079bd58a379c282a2b6c324995f6e358
+| | Author: MSII <patthaveekarn2544@gmail.com>
+| | Date:   Tue Feb 24 00:11:13 2026 +0700
+| |
+| |     fix: remove target build loop
+| |
+* |   commit 1a232cc55a84018afe2cc481aedbf66d9af44967
+|\ \  Merge: 569b7e7 1bea095
+| | | Author: patthaveekarn <76035537+patthaveekarn@users.noreply.github.com>
+| | | Date:   Sun Feb 22 20:31:31 2026 +0700
+| | |
+| | |     Merge pull request #5 from Neolemoz/aum
+| | |
+| | |     frontend
+| | |
+| * | commit 1bea095cffd791183b89ea7d663aaa7a0ff7b224
+| | | Author: MSII <patthaveekarn2544@gmail.com>
+| | | Date:   Sun Feb 22 20:30:07 2026 +0700
+| | |
+| | |     delete
+| | |
+| * | commit 3df4c88d13a926b9ec3a223cc5128af2c8db320e
+| | | Author: MSII <patthaveekarn2544@gmail.com>
+| | | Date:   Sun Feb 22 20:15:26 2026 +0700
+| | |
+| | |     npm
+| | |
+| * | commit dfd49925b36b81b7d30bd812b9b790451974f32d
+| | | Author: MSII <patthaveekarn2544@gmail.com>
+| | | Date:   Wed Feb 18 18:47:48 2026 +0700
+| | |
+| | |     npm
+| | |
+| * | commit 976a1cc751c9bde438eee632c5125a9412bd536d
+|/ /  Author: MSII <patthaveekarn2544@gmail.com>
+| |   Date:   Wed Feb 18 18:40:18 2026 +0700
+| |
+| |       frontend
+| |
+| | * commit 4db3130ccf5538b6549097141391a1666bc57895 (origin/frontend)
+| | | Author: lemon <cielismxbeta@gmail.com>
+| | | Date:   Sat Feb 28 22:26:26 2026 +0700
+| | |
+| | |     Update .gitignore to ignore build and IDE files
+| | |
+| | * commit ab7f80f7ae67bb205eb732e6bfd398e636f1f4c4
+| | | Author: lemon <cielismxbeta@gmail.com>
+| | | Date:   Sat Feb 28 22:25:25 2026 +0700
+| | |
+| | |     Remove target from tracking and ignore build files
+| | |
+| | * commit 021014fe981522e0abd912b299557bbd6ee75333
+| |/  Author: lemon <cielismxbeta@gmail.com>
+| |   Date:   Tue Feb 24 02:24:24 2026 +0700
+| |
+| |       Wire Finish button to navigate to GamePage
+| |
+| * commit 5bef4b7fd01dd9935b2afc0e7b19f26a3daec9b7
+| | Author: lemon <cielismxbeta@gmail.com>
+| | Date:   Mon Feb 23 23:46:24 2026 +0700
+| |
+| |     Frontend: adjust layout (player panels + bigger hex board)
+| |
+| * commit 08ba5ffdd1ad3bc7839d3c2c1504fc19ff9bd269
+| | Author: lemon <cielismxbeta@gmail.com>
+| | Date:   Mon Feb 23 20:51:17 2026 +0700
+| |
+| |     แก้หน้าุเหลี่ยม
+| |
+| * commit 7393e480ad1542f62c08381775b4040a4420ab01
+| | Author: lemon <cielismxbeta@gmail.com>
+| | Date:   Mon Feb 23 06:48:02 2026 +0700
+| |
+| |     Checkpoint: Select Mode layout fix
+| |
+| * commit 7699eab5e032b2a15abad3d4d1335992a3e7c2be
+|/  Author: lemon <cielismxbeta@gmail.com>
+|   Date:   Sun Feb 22 03:29:18 2026 +0700
+|
+|       feat(frontend): init React app
+|
+* commit 569b7e787e5c115fbf60407fb29fd086ab8e2092
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 23:27:58 2026 +0700
+|
+|     ทำtest
+|
+| * commit a8fd1f90861c156b4f34017e4cf9e2063caac9a0 (origin/test)
+|/  Author: MorohaZ <chayanat_h@cmu.ac.th>
+|   Date:   Tue Feb 10 23:27:58 2026 +0700
+|
+|       ทำtest
+|
+* commit c1662bd15a606944a874686fc6b702fce5d6f383
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 23:04:01 2026 +0700
+|
+|     หาบัคแก้บัครอบที่1011111
+|
+* commit a61260912a520a0cc44d35dbc166c7b82c822d15
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 23:03:36 2026 +0700
+|
+|     หาบัคแก้บัครอบที่1011111
+|
+* commit 5d996042451fb0581551c5c543ed96243f655cef
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 21:37:32 2026 +0700
+|
+|     หาบัคแก้บัครอบที่1011
+|
+* commit df72ec23f13ed68aaed111e757a3698fb56d7f42
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 20:42:55 2026 +0700
+|
+|     หาบัคแก้บัครอบที่1011
+|
+* commit 7f9f54e2fdab6078d532f67826afc739f06e465f
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 20:20:16 2026 +0700
+|
+|     หาบัคแก้บัครอบที่101
+|
+* commit 9b8518c8fc526d701217646e521a33a3fb0fcc91
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 20:08:25 2026 +0700
+|
+|     หาบัคแก้บัครอบที่101
+|
+* commit cb1cdb130c0ec857df051995e7a558bb90c1a0c4
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 19:39:11 2026 +0700
+|
+|     หาบัคแก้บัครอบที่101
+|
+* commit 3b7988dcaf4e378e26f443cc3701c8707747c84c
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 18:56:27 2026 +0700
+|
+|     หาบัคแก้บัครอบที่101
+|
+* commit 65011cd56244ad569e37c507a9958e9cc013abdc
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Tue Feb 10 18:39:18 2026 +0700
+|
+|     หาบัคแก้บัค
+|
+* commit 644967869fb33a17edac83969c78f10aa42c17ea
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Sat Feb 7 13:42:08 2026 +0700
+|
+|     ทดสอบหน้าบ้าน
+|
+* commit 4741412030c721e1e415ad95128dc43ebb16c9ab
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 18:38:11 2026 +0700
+|
+|     ทดสอบหน้าบ้าน
+|
+*   commit 5325aa83b6340282ee85477115c5297365c07f2f
+|\  Merge: a1ffb3c b2007e1
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Thu Feb 5 18:16:10 2026 +0700
+| |
+| |     Merge remote-tracking branch 'origin/main'
+| |
+| * commit b2007e1a2ac83631acfaed6fd718f5dd5412e4b9
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Thu Feb 5 18:02:02 2026 +0700
+| |
+| |     ทดสอบหน้าบ้าน
+| |
+* | commit a1ffb3cb93d61526c5b32c2f0746f3d757994c5c
+|/  Author: MorohaZ <chayanat_h@cmu.ac.th>
+|   Date:   Thu Feb 5 18:02:02 2026 +0700
+|
+|       ทดสอบหน้าบ้าน
+|
+* commit 20589e5edb3a95aec30c06a034acc1528bb6ca29
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 17:49:42 2026 +0700
+|
+|     ทดสอบหน้าบ้าน
+|
+* commit b2cb2c0758b764df1167df2a7a0c66e692296420
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 17:42:37 2026 +0700
+|
+|     ทดสอบหน้าบ้าน
+|
+* commit dc808927a2a5ff6954e36e03f6bc749d264f2b32
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 17:36:25 2026 +0700
+|
+|     ทดสอบหน้าบ้าน
+|
+* commit 753358efc14fa602274bf49f3ff2409a5da67b09
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 17:30:02 2026 +0700
+|
+|     แก้ไขรันได้ยังไม่ได้ทำFrontend
+|
+* commit 8c2877a658ecd041467681d9ed36617ffb9345ef
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 17:03:00 2026 +0700
+|
+|     แก้ไขเพิ่มเติม
+|
+* commit ac9af038b81d95015311937e9ba9dd6bd97432f9
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 16:27:38 2026 +0700
+|
+|     แก้ไขเพิ่มเติม
+|
+* commit de406e285efbb6286c0baa8f2d74b4421c0a45a5
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 16:04:50 2026 +0700
+|
+|     แก้ไขเพิ่มเติม
+|
+* commit bc0b3512851ea57b8d70785a5fdf2843f59e5563
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 16:02:13 2026 +0700
+|
+|     แก้ไขเพิ่มเติม
+|
+* commit 77c1813d7f28421bcf744c8cc7998a2a4fc33310
+| Author: MorohaZ <chayanat_h@cmu.ac.th>
+| Date:   Thu Feb 5 15:55:45 2026 +0700
+|
+|     แก้ไขเพิ่มเติม
+|
+*   commit 0b09cc6b6d364c5dd432d72531d476c2eb62c26d
+|\  Merge: 6eddf1d af94010
+| | Author: MorohaZ <chayanat_h@cmu.ac.th>
+| | Date:   Thu Feb 5 15:33:20 2026 +0700
+| |
+| |     Merge remote-tracking branch 'origin/main'
+| |
+| *   commit af940101ce2cddc57f61308d6ba762f5a470398d
+| |\  Merge: 8cc9399 0c9ae1e
+| | | Author: MorohaZ <141795069+MorohaZ@users.noreply.github.com>
+| | | Date:   Thu Feb 5 13:40:20 2026 +0700
+| | |
+| | |     Merge pull request #3 from Neolemoz/test
+| | |
+| | |     สร้างคลาสต่างๆ
+| | |
+* | | commit 6eddf1d3c2dcaa1772d0d03ddd3e4bedc818891d
+| |/  Author: MorohaZ <chayanat_h@cmu.ac.th>
+|/|   Date:   Thu Feb 5 15:33:02 2026 +0700
+| |
+| |       จัดระเบียบคลาสและข้อมูล
+| |
+* | commit 0c9ae1e8d7d0293cea9acd938ada4116b815b85d
+|/  Author: MorohaZ <chayanat_h@cmu.ac.th>
+|   Date:   Wed Feb 4 19:17:57 2026 +0700
+|
+|       สร้างคลาสต่างๆ
+|
+*   commit 8cc9399eae409e237bd753bebf1cb267916a2e1d
+|\  Merge: 9a08d86 e2fa14e
+| | Author: Neolemoz <cielismxbeta@gmail.com>
+| | Date:   Thu Jan 8 15:43:27 2026 +0700
+| |
+| |     Merge pull request #1 from Neolemoz/test
+| |
+| |     Test
+| |
+| * commit e2fa14e615a047b39ccaa5ea5d4aa5a3c3a5f8c7
+| | Author: Neolemoz <cielismxbeta@gmail.com>
+| | Date:   Thu Jan 8 15:42:51 2026 +0700
+| |
+| |     Delete a
+| |
+| * commit f463c38085e105fee828a7ab0eddbd183c7d0ff4
+|/  Author: Neolemoz <cielismxbeta@gmail.com>
+|   Date:   Thu Jan 8 15:42:21 2026 +0700
+|
+|       Create a
+|
+* commit 9a08d8613d9ae7109fb998479c8d0b63a2414960
+  Author: Neolemoz <cielismxbeta@gmail.com>
+  Date:   Thu Jan 8 15:28:42 2026 +0700
