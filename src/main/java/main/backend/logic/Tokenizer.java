@@ -20,7 +20,7 @@ public class Tokenizer {
         // Group 2: Identifier (ตัวแปร/คำสั่ง)
         // Group 3: Number (ตัวเลข)
         // Group 4: Operator/Symbol
-        String regex = "(#.*)|([a-zA-Z_]\\w*)|(\\d+)|([+=\\-*/%^(){}<>])";
+        String regex = "(#.*)|([a-zA-Z_]\\w*)|(\\d+)|(>=|<=|[+=\\-*/%^(){}<>])"; // L-03 fix: add >= <=
 
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);

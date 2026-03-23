@@ -31,16 +31,21 @@ public class MinionContext {
         // 1. Reserved Words
         Player owner = minion.getOwner();
 
-        if (name.equals("Budget")) return owner.getBudgetLong();
         if (name.equals("row")) return minion.getRow();
         if (name.equals("col")) return minion.getCol();
+        if (name.equals("Budget")) return owner.getBudgetLong();
 
-        // แก้ไข: ดึงดอกเบี้ย (Int) ผ่าน GameState เพื่อความถูกต้อง
-        if (name.equals("int")) {
+        // แก้ไข: เปลี่ยนเป็น "Int" (ตัว I ใหญ่) ให้ตรงกับ Spec และ Evaluator
+        if (name.equals("Int")) {
             return gameState.calculateInterest(owner.getBudgetLong());
         }
 
-        if (name.equals("maxbudget")) return gameState.getMaxBudget();
+        // แก้ไข: เปลี่ยนเป็น "MaxBudget" (M, B ใหญ่) ให้ตรงกับ Spec
+        if (name.equals("MaxBudget")) return gameState.getMaxBudget();
+
+        // เพิ่มตัวแปร "SpawnsLeft" ตาม Spec
+        if (name.equals("SpawnsLeft")) return gameState.getRemainingSpawns(owner.getId());
+
         if (name.equals("random")) return (long) (Math.random() * 1000);
 
         // 2. Global/Local Variables

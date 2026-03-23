@@ -3,79 +3,150 @@ package main.backend.controller;
 import main.backend.model.GameState;
 import main.backend.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@RestController
+@Controller
+@RestController           // ยังคง REST ไว้ด้วยสำหรับ /api/state และ /api/start
 @RequestMapping("/api")
-@CrossOrigin(origins = "*") // อนุญาตให้หน้าเว็บเรียกใช้ API ได้
+@CrossOrigin(origins = "*")
 public class GameController {
 
     @Autowired
     private GameService gameService;
 
-    // 1. เริ่มเกมใหม่
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    // ── helper: broadcast state หลังทุก action ──
+    private void broadcast() {
+        messagingTemplate.convertAndSend("/topic/game", gameService.getGameState());
+    }
+
+    // ─────────────────────────────────────────────
+    // REST (ใช้ตอน setup ก่อนเกิม และ fallback)
+    // ─────────────────────────────────────────────
+
     @PostMapping("/start")
-    public GameState startGame() {
+    public GameState startGame(@RequestBody(required = false) Map<String, Object> payload) {
+        String mode = (payload != null && payload.containsKey("mode"))
+                ? (String) payload.get("mode")
+                : "duel";
+        gameService.setGameMode(mode.toLowerCase());
         gameService.init();
+        broadcast();
         return gameService.getGameState();
     }
 
-    // 2. ดึงสถานะเกมปัจจุบัน (ใช้ Polling จากหน้าเว็บ)
     @GetMapping("/state")
     public GameState getGameState() {
         return gameService.getGameState();
     }
 
-    // 3. ซื้อพื้นที่
-    @PostMapping("/buy")
-    public boolean buyHex(@RequestBody Map<String, Integer> payload) {
-        int playerId = 1; // สมมติว่าเป็น Player 1 เสมอ (ในเฟสนี้)
-        // หรือรับ playerId มาจาก payload ก็ได้
-        return gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
+    @PostMapping("/minion_type")
+    public boolean defineMinionType(@RequestBody Map<String, Object> payload) {
+        boolean result = gameService.defineMinionType(
+                (String) payload.get("name"),
+                (int)    payload.get("hp"),
+                (int)    payload.get("defense"),
+                (String) payload.get("script")
+        );
+        return result;
     }
 
-    // 4. วาง Minion (แบบระบุ Type)
-    @PostMapping("/spawn")
-    public boolean spawnMinion(@RequestBody Map<String, Object> payload) {
-        int playerId = 1;
-        int row = (int) payload.get("row");
-        int col = (int) payload.get("col");
-
-        // เช็คว่าส่งมาเป็น typeName หรือ manual stats
-        if (payload.containsKey("minionType")) {
-            String typeName = (String) payload.get("minionType");
-            return gameService.spawnMinion(playerId, row, col, typeName);
-        } else {
-            // กรณีส่งค่ามาเอง (Defense + Code)
-            long defense = Long.parseLong(payload.get("defense").toString());
-            String code = (String) payload.get("strategy");
-            return gameService.spawnMinion(playerId, row, col, defense, code);
+    @PostMapping("/validate")
+    public Map<String, Object> validateScript(@RequestBody Map<String, String> payload) {
+        try {
+            gameService.validateScript(payload.get("script"));
+            return Map.of("ok", true, "message", "Valid strategy");
+        } catch (Exception e) {
+            return Map.of("ok", false, "message", e.getMessage());
         }
     }
 
-    // 5. กำหนดชนิด Minion (เรียกครั้งเดียวตอนเริ่ม หรือตอน Config)
-    @PostMapping("/minion_type")
-    public boolean defineMinionType(@RequestBody Map<String, Object> payload) {
-        String name = (String) payload.get("name");
-        int hp = (int) payload.get("hp");
-        int defense = (int) payload.get("defense");
-        String script = (String) payload.get("script");
-
-        return gameService.defineMinionType(name, hp, defense, script);
-    }
-
-    // 6. จบเทิร์น
-    @PostMapping("/endturn")
-    public GameState endTurn() {
-        gameService.endTurn();
-        return gameService.getGameState();
-    }
-
-    // 7. ตรวจสอบผู้ชนะ
     @GetMapping("/winner")
     public int checkWinner() {
         return gameService.checkWinner();
+    }
+
+    // REST endpoints (fallback เมื่อ WebSocket ยังไม่ ready)
+    @PostMapping("/endturn")
+    public GameState endTurnRest() {
+        gameService.endTurn();
+        broadcast();
+        return gameService.getGameState();
+    }
+
+    @PostMapping("/buy")
+    public GameState buyHexRest(@RequestBody Map<String, Integer> payload) {
+        int playerId = gameService.getCurrentPlayerId();
+        gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
+        broadcast();
+        return gameService.getGameState();
+    }
+
+    @PostMapping("/spawn")
+    public GameState spawnMinionRest(@RequestBody Map<String, Object> payload) {
+        int playerId = gameService.getCurrentPlayerId();
+        int row = (int) payload.get("row");
+        int col = (int) payload.get("col");
+        if (payload.containsKey("minionType")) {
+            gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
+        } else {
+            long defense = Long.parseLong(payload.get("defense").toString());
+            gameService.spawnMinion(playerId, row, col, defense, (String) payload.get("strategy"));
+        }
+        broadcast();
+        return gameService.getGameState();
+    }
+
+    // ─────────────────────────────────────────────
+    // WebSocket — client ส่งมาที่ /app/...
+    // ─────────────────────────────────────────────
+
+    // client ส่ง: { "row": 2, "col": 3 }
+    @MessageMapping("/buy")
+    public void buyHex(Map<String, Integer> payload) {
+        int playerId = gameService.getCurrentPlayerId();
+        gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
+        broadcast();
+    }
+
+    // client ส่ง: { "row": 1, "col": 1, "minionType": "Warrior" }
+    //         หรือ: { "row": 1, "col": 1, "defense": 10, "strategy": "move up" }
+    @MessageMapping("/spawn")
+    public void spawnMinion(Map<String, Object> payload) {
+        int playerId = gameService.getCurrentPlayerId();
+        int row = (int) payload.get("row");
+        int col = (int) payload.get("col");
+
+        if (payload.containsKey("minionType")) {
+            gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
+        } else {
+            long defense = Long.parseLong(payload.get("defense").toString());
+            gameService.spawnMinion(playerId, row, col, defense, (String) payload.get("strategy"));
+        }
+        broadcast();
+    }
+
+    // client ส่ง: {} (ไม่มี body)
+    @MessageMapping("/endturn")
+    public void endTurn() {
+        gameService.endTurn();
+        broadcast();
+    }
+
+    // client ส่ง: { "playerId": 1, "script": "move up" }
+    @MessageMapping("/strategy")
+    public void submitStrategy(Map<String, Object> payload) {
+        gameService.setPlayerStrategy(
+                (int) payload.get("playerId"),
+                (String) payload.get("script")
+        );
+        broadcast();
     }
 }

@@ -1,6 +1,7 @@
 package main.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Hex {
     private final int row;
@@ -8,15 +9,14 @@ public class Hex {
     private boolean isSpawnable = false;
     private Minion occupant = null;
 
-    @JsonIgnore // เพิ่ม JsonIgnore เพื่อป้องกัน loop
-    private Player owner; // เพิ่มตัวแปรนี้
+    @JsonIgnore
+    private Player owner;
 
     public Hex(int row, int col) {
         this.row = row;
         this.col = col;
     }
 
-    // --- Getters & Setters ---
     public boolean isSpawnable() { return isSpawnable; }
     public void setSpawnable(boolean spawnable) { isSpawnable = spawnable; }
 
@@ -26,7 +26,16 @@ public class Hex {
     public int getRow() { return row; }
     public int getCol() { return col; }
 
-    // เพิ่มชุดนี้เข้าไปเพื่อแก้ Error "cannot find symbol setOwner"
+    @JsonIgnore
     public Player getOwner() { return owner; }
     public void setOwner(Player owner) { this.owner = owner; }
+
+    // ── KEY FIX: เพิ่ม @JsonProperty เพื่อบังคับให้ Jackson serialize ออกมาเสมอ ──
+    @JsonProperty("ownerId")
+    public Integer getOwnerId() {
+        if (this.owner != null) {
+            return this.owner.getId();
+        }
+        return null;
+    }
 }

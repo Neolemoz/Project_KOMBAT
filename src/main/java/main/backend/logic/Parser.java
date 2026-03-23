@@ -49,6 +49,7 @@ public class Parser {
         consume("(");
         ExpressionNode condition = parseExpression();
         consume(")");
+        if (pos < tokens.size() && peek().equals("then")) consume("then"); // C-01 fix
         Node thenBlock = parseStatement();
         Node elseBlock = null;
         if (pos < tokens.size() && peek().equals("else")) {
@@ -93,8 +94,10 @@ public class Parser {
         if (!action.equals("done") && pos < tokens.size() && !isReserved(peek())) {
             String next = peek();
             // เช็คว่าเป็นทิศทางหรือไม่
-            if (next.matches("up|down|upleft|upright|downleft|downright")) {
+            if (next.matches("up|down|upleft|upright|downleft|downright|right|left")) {
                 direction = consume();
+                if (direction.equals("right")) direction = "upright"; // alias fix
+                if (direction.equals("left"))  direction = "upleft";  // alias fix
             }
         }
 
@@ -212,6 +215,6 @@ public class Parser {
     private boolean isReserved(String t) {
         // ใช้สำหรับเช็คว่าคำถัดไปเป็น command ใหม่หรือ control flow หรือไม่
         // เพื่อแยกแยะใน parseAction ว่าจบคำสั่ง move/shoot หรือยัง
-        return t.equals("if") || t.equals("else") || t.equals("while") || t.equals("}") || t.equals("done");
+        return t.equals("if") || t.equals("else") || t.equals("then") || t.equals("while") || t.equals("}") || t.equals("done") || t.equals("move") || t.equals("shoot"); // C-02 L-05 fix
     }
 }

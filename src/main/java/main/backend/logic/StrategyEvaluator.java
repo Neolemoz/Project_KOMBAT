@@ -41,12 +41,13 @@ public class StrategyEvaluator {
     }
 
     private long evaluateExpression(ExpressionNode expr, MinionContext ctx) {
+        // M-05 fix: surface ArithmeticException (e.g. divide-by-zero) as 0, log others
         try {
-            // แก้ไข: เรียกใช้ evaluate() ของ Node โดยตรง
-            // ให้ VariableNode ไปดึงค่าจาก MinionContext เอง (ซึ่งแก้เรื่อง double/long ไว้แล้ว)
-            // ให้ BinaryOpNode ไปคำนวณเลขเอง (รวมถึง ^ ที่เพิ่มไปแล้ว)
             return expr.evaluate(ctx);
+        } catch (ArithmeticException e) {
+            return 0; // divide-by-zero → 0 per spec
         } catch (Exception e) {
+            System.err.println("[StrategyEvaluator] expression error: " + e.getMessage());
             return 0;
         }
     }
@@ -54,8 +55,9 @@ public class StrategyEvaluator {
     private boolean isSpecialVariable(String name) {
         // รายชื่อตัวแปรที่ห้าม Assign ค่าทับ
         return name.equals("row") || name.equals("col") || name.equals("Budget") ||
-                name.equals("int") || name.equals("maxbudget") || name.equals("random") ||
-                name.equals("ally") || name.equals("opponent") || name.equals("nearby");
+                name.equals("Int") || name.equals("MaxBudget") || name.equals("random") ||
+                name.equals("ally") || name.equals("opponent") || name.equals("nearby") ||
+                name.equals("SpawnsLeft");
     }
 
     // --- Logic การคำนวณข้อมูล (Info Expressions) ---
@@ -78,8 +80,9 @@ public class StrategyEvaluator {
         int r = me.getRow();
         int c = me.getCol();
         int dist = 0;
+        final int MAX_DIST = 8; // L-08 fix: cap to board size to prevent infinite loop
 
-        while (true) {
+        while (dist < MAX_DIST) {
             int[] next = gs.getNeighbor(r, c, direction);
             r = next[0];
             c = next[1];
@@ -98,6 +101,7 @@ public class StrategyEvaluator {
                 return (target.getOwner() == me.getOwner()) ? -val : val;
             }
         }
+        return 0;
     }
 
     private static long calculateClosest(GameState gs, Minion me, boolean findAlly) {
@@ -124,7 +128,8 @@ public class StrategyEvaluator {
                     boolean isAlly = (target.getOwner() == me.getOwner());
 
                     if (isAlly == findAlly) {
-                        if (dist < minDistance) {
+                        // M-04 fix: prefer smaller dist; on tie prefer lower-numbered direction (spec)
+                        if (dist < minDistance || (dist == minDistance && dir < (int)(bestValue % 10))) {
                             minDistance = dist;
                             bestValue = (long) dist * 10 + dir;
                         }
