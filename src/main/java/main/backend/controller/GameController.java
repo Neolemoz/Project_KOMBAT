@@ -23,7 +23,8 @@ public class GameController {
     private SimpMessagingTemplate messagingTemplate;
 
     // ── helper: broadcast state หลังทุก action ──
-    private void broadcast() {
+    private void broadcast()
+    {
         messagingTemplate.convertAndSend("/topic/game", gameService.getGameState());
     }
 
