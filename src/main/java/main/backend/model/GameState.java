@@ -162,15 +162,16 @@ public class GameState {
     }
 
     public int[] getNeighbor(int row, int col, String direction) {
+        if (direction == null) return new int[]{row, col};
         int dRow = 0, dCol = 0;
-        boolean isOdd = (row % 2 != 0);
+        boolean isOdd = (col % 2 != 0);
         switch (direction) {
-            case "up":        dRow = -1; dCol = 0; break;
-            case "down":      dRow =  1; dCol = 0; break;
-            case "upleft":    dRow = -1; dCol = isOdd ? -1 : 0; break;
-            case "upright":   dRow = -1; dCol = isOdd ?  0 : 1; break;
-            case "downleft":  dRow =  1; dCol = isOdd ? -1 : 0; break;
-            case "downright": dRow =  1; dCol = isOdd ?  0 : 1; break;
+            case "up":        dRow = -1; dCol =  0; break;
+            case "down":      dRow =  1; dCol =  0; break;
+            case "upleft":    dRow = isOdd ?  0 : -1; dCol = -1; break;
+            case "upright":   dRow = isOdd ?  0 : -1; dCol =  1; break;
+            case "downleft":  dRow = isOdd ?  1 :  0; dCol = -1; break;
+            case "downright": dRow = isOdd ?  1 :  0; dCol =  1; break;
         }
         return new int[]{row + dRow, col + dCol};
     }
