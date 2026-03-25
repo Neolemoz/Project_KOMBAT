@@ -27,7 +27,6 @@ public class GameService {
     public void setGameMode(String mode) {
         this.gameMode = mode;
     }
-
     public String getGameMode() {
         return gameMode;
     }
@@ -174,21 +173,26 @@ public class GameService {
     public void endTurn() {
         if (checkWinner() != 0) return;
 
+        // 1. รัน AI ของเจ้าของเทิร์นปัจจุบัน
         Player currentP = gameState.getPlayer(currentPlayerId);
         executeTeam(currentP);
 
+        // 2. สลับตาผู้เล่น (Switch Turn)
         if (currentPlayerId == 1) {
             currentPlayerId = 2;
         } else {
             currentPlayerId = 1;
-            gameState.nextTurn();
+            gameState.nextTurn(); // ขึ้นรอบใหม่เมื่อ P2 จบ
         }
 
+        // อัปเดตลง GameState ส่งไปให้หน้าเว็บ
         gameState.setActivePlayerId(currentPlayerId);
 
+        // 3. เริ่มเทิร์นของผู้เล่นคนถัดไป (คิดเงิน)
         if (!gameState.isGameOver()) {
             startTurn(currentPlayerId);
 
+            // --- ส่วนที่เพิ่มสำหรับโหมด Solitaire ---
             if ("solitaire".equals(this.gameMode) && currentPlayerId == 2) {
                 playBotTurn();
             }
@@ -198,8 +202,15 @@ public class GameService {
     private void executeTeam(Player p) {
         for (Minion m : new java.util.ArrayList<>(p.getMinions())) {
             if (!m.isAlive()) continue;
-            Node ast = m.getStrategy();
-            if (ast == null) continue;
+            Node ast = m.getStrategyAST();
+
+            if (ast == null) {
+                System.out.println("[Debug] Minion " + m.getName() + " at (" + m.getRow() + "," + m.getCol() + ") has no strategy!");
+                continue;
+            }
+
+            System.out.println("[Debug] Executing strategy for P" + p.getId() + " minion at (" + m.getRow() + "," + m.getCol() + ")");
+
             MinionContext ctx = new MinionContext(m, gameState);
             new StrategyEvaluator().execute(ast, ctx);
         }
@@ -209,6 +220,7 @@ public class GameService {
         Player p1 = gameState.getPlayer(1);
         Player p2 = gameState.getPlayer(2);
 
+        // เช็ค elimination เฉพาะเมื่อทั้งสองฝ่ายเคย spawn แล้ว
         boolean p1EverSpawned = p1.getMinions().size() > 0;
         boolean p2EverSpawned = p2.getMinions().size() > 0;
         if (p1EverSpawned && p2EverSpawned) {
@@ -227,21 +239,16 @@ public class GameService {
             if (p2.getTotalHp() > p1.getTotalHp()) return 2;
             if (p1.getBudget() > p2.getBudget()) return 1;
             if (p2.getBudget() > p1.getBudget()) return 2;
-            return 1;
+            return 1; // spec tiebreak: P1 wins
         }
 
         return 0;
     }
 
-    public int getCurrentPlayerId() {
-        return currentPlayerId;
-    }
-
-    public GameState getGameState() {
-        return gameState;
-    }
-
+    public int getCurrentPlayerId() { return currentPlayerId; }
+    public GameState getGameState() { return gameState; }
     public void setPlayerStrategy(int playerId, String script) {
+        // H-01 fix: set AST on each minion instead of executing immediately
         List<String> tokens = new Tokenizer(script).tokenize();
         Node strategyTree = new Parser(tokens).parse();
         for (Minion minion : gameState.getMinionsOfPlayer(playerId)) {
@@ -250,31 +257,37 @@ public class GameService {
     }
 
     public void validateScript(String Strategy) throws Exception {
+        // ใช้ Tokenizer + Parser ที่มีอยู่แล้ว
         List<String> tokens = new Tokenizer(Strategy).tokenize();
         new Parser(tokens).parse();
+        // ถ้าไม่ throw = grammar ถูก
     }
 
-    // --- Logic  Bot ---
+    // --- Logic สำหรับ Bot ---
     public void playBotTurn() {
-        if (checkWinner() != 0) return;
+        if (checkWinner() != 0) return; // ถ้าเกมจบแล้วไม่ต้องทำอะไร
         Player bot = gameState.getPlayer(currentPlayerId);
 
+        // 1. Bot พยายาม Spawn Minion (วนหาช่องว่างที่สามารถ Spawn ได้)
         boolean hasSpawned = false;
         for (int r = 1; r <= 8 && !hasSpawned; r++) {
             for (int c = 1; c <= 8 && !hasSpawned; c++) {
                 if (gameState.canSpawn(bot, r, c)) {
                     if (!definedMinionTypes.isEmpty()) {
-
+                        // สุ่มหยิบชนิดของ Minion ที่มีอยู่ในเกมมา 1 ชนิด
                         List<String> types = new ArrayList<>(definedMinionTypes.keySet());
                         String randomType = types.get((int) (Math.random() * types.size()));
 
+                        // วาง Minion (ฟังก์ชันนี้จะเช็คเรื่องงบ และตัวแรกฟรีให้เองที่เราแก้ไปก่อนหน้านี้)
                         spawnMinion(currentPlayerId, r, c, randomType);
-                        hasSpawned = true;
+                        hasSpawned = true; // Spawn ตัวเดียวพอแล้วค่อยไปลุยต่อเทิร์นหน้า
                     }
                 }
             }
-            endTurn();
         }
 
+        // 2. จบเทิร์นให้ Bot ทันที เพื่อประมวลผล Strategy และสลับตากลับ
+        endTurn();
     }
+
 }

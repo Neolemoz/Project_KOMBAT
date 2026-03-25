@@ -3,12 +3,6 @@ package main.backend;
 import java.util.*;
 import java.util.regex.*;
 
-// ═══════════════════════════════════════════════════════
-//  KOMBAT — Standalone Terminal Runner
-//  compile:  javac Kombat.java
-//  run:      java Kombat
-// ═══════════════════════════════════════════════════════
-
 public class Kombat {
 
     // ──────────────────────────────────────────────────
