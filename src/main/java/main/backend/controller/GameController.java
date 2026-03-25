@@ -49,10 +49,13 @@ public class GameController {
 
     @PostMapping("/minion_type")
     public boolean defineMinionType(@RequestBody Map<String, Object> payload) {
+        // JSON numbers come in as Integer or Double — use Number to safely convert
+        int hp      = ((Number) payload.get("hp")).intValue();
+        int defense = ((Number) payload.get("defense")).intValue();
         boolean result = gameService.defineMinionType(
                 (String) payload.get("name"),
-                (int)    payload.get("hp"),
-                (int)    payload.get("defense"),
+                hp,
+                defense,
                 (String) payload.get("script")
         );
         return result;
@@ -73,34 +76,40 @@ public class GameController {
         return gameService.checkWinner();
     }
 
-    // REST endpoints (fallback เมื่อ WebSocket ยังไม่ ready)
+    // ── REST fallback endpoints ──
+
     @PostMapping("/endturn")
     public GameState endTurnRest() {
         gameService.endTurn();
-        broadcast();
-        return gameService.getGameState();
-    }
-
-    @PostMapping("/buy")
-    public GameState buyHexRest(@RequestBody Map<String, Integer> payload) {
-        int playerId = gameService.getCurrentPlayerId();
-        gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
-        broadcast();
         return gameService.getGameState();
     }
 
     @PostMapping("/spawn")
-    public GameState spawnMinionRest(@RequestBody Map<String, Object> payload) {
+    public GameState spawnRest(@RequestBody Map<String, Object> payload) {
         int playerId = gameService.getCurrentPlayerId();
-        int row = (int) payload.get("row");
-        int col = (int) payload.get("col");
+        int row = ((Number) payload.get("row")).intValue();
+        int col = ((Number) payload.get("col")).intValue();
         if (payload.containsKey("minionType")) {
             gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
         } else {
-            long defense = Long.parseLong(payload.get("defense").toString());
+            long defense = ((Number) payload.get("defense")).longValue();
             gameService.spawnMinion(playerId, row, col, defense, (String) payload.get("strategy"));
         }
-        broadcast();
+        return gameService.getGameState();
+    }
+
+    @PostMapping("/buy")
+    public GameState buyRest(@RequestBody Map<String, Object> payload) {
+        int playerId = gameService.getCurrentPlayerId();
+        int row = ((Number) payload.get("row")).intValue();
+        int col = ((Number) payload.get("col")).intValue();
+        gameService.buyHex(playerId, row, col);
+        return gameService.getGameState();
+    }
+
+    @PostMapping("/bot_turn")
+    public GameState botTurn() {
+        gameService.playBotTurn();
         return gameService.getGameState();
     }
 

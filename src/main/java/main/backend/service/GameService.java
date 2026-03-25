@@ -200,12 +200,12 @@ public class GameService {
     }
 
     private void executeTeam(Player p) {
-        for (Minion m : p.getMinions()) {
-            if (m.isAlive()) {
-                MinionContext ctx = new MinionContext(m, gameState);
-                // สร้าง Evaluator ใหม่ทุกครั้งเพื่อความสะอาดของ State
-                new StrategyEvaluator().execute(m.getStrategy(), ctx);
-            }
+        for (Minion m : new java.util.ArrayList<>(p.getMinions())) {
+            if (!m.isAlive()) continue;
+            Node ast = m.getStrategy();
+            if (ast == null) continue;
+            MinionContext ctx = new MinionContext(m, gameState);
+            new StrategyEvaluator().execute(ast, ctx);
         }
     }
 
@@ -213,14 +213,12 @@ public class GameService {
         Player p1 = gameState.getPlayer(1);
         Player p2 = gameState.getPlayer(2);
 
-        // ตรวจสอบ elimination เฉพาะหลัง turn 1 ผ่านไปแล้ว (ทั้งสองฝ่ายมีโอกาส spawn)
-        // และต้องมี minion อย่างน้อย 1 ฝ่ายเคย spawn แล้ว ไม่งั้น turn แรกจะจบเกมทันที
-        int t = gameState.getTurnCount();
+        // เช็ค elimination เฉพาะเมื่อทั้งสองฝ่ายเคย spawn แล้ว
         boolean p1EverSpawned = p1.getMinions().size() > 0;
         boolean p2EverSpawned = p2.getMinions().size() > 0;
-        if (t >= 2 || (p1EverSpawned && p2EverSpawned)) {
-            boolean p1Dead = p1EverSpawned && p1.getAliveMinionCount() == 0;
-            boolean p2Dead = p2EverSpawned && p2.getAliveMinionCount() == 0;
+        if (p1EverSpawned && p2EverSpawned) {
+            boolean p1Dead = p1.getAliveMinionCount() == 0;
+            boolean p2Dead = p2.getAliveMinionCount() == 0;
             if (p1Dead && p2Dead) return 3;
             if (p1Dead) return 2;
             if (p2Dead) return 1;
