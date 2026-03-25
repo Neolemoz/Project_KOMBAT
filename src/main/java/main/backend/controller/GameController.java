@@ -58,14 +58,13 @@ public class GameController {
         return result;
     }
 
-    @PostMapping("/validate")
+    @PostMapping({"/validate", "/strategy/validate"})
     public Map<String, Object> validateScript(@RequestBody Map<String, String> payload) {
-        try {
-            gameService.validateScript(payload.get("script"));
-            return Map.of("ok", true, "message", "Valid strategy");
-        } catch (Exception e) {
-            return Map.of("ok", false, "message", e.getMessage());
+        String strategy = payload == null ? null : payload.get("strategy");
+        if ((strategy == null || strategy.isBlank()) && payload != null) {
+            strategy = payload.get("script");
         }
+        return gameService.validateStrategyInput(strategy);
     }
 
     @GetMapping("/winner")

@@ -1,19 +1,35 @@
-// frontend/src/App.jsx
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import HomePage from "./pages/Home"
 import ModeSelectPage from "./pages/ModeSelectPage"
 import MinionTypePage from "./pages/MinionTypePage"
 import ChooseMinionPage from "./pages/ChooseMinionPage"
 import MinionStrategyPage from "./pages/MinionStrategyPage"
 import GamePage from "./pages/GamePage"
+import { FLOW } from "./constants/flow"
+import { PageShell, PageTitle } from "./components/layout"
+import { Button } from "./components/ui/Button"
+import { ASSETS } from "./constants/assets"
+import { pageUi } from "./constants/pageUi"
+
+function createEmptyBoard(rows = 8, cols = 8) {
+  const cells = {}
+  for (let row = 1; row <= rows; row += 1) {
+    for (let col = 1; col <= cols; col += 1) {
+      cells[`${row},${col}`] = { row, col, minion: null }
+    }
+  }
+  return cells
+}
 
 export default function App() {
-  const [page, setPage] = useState("home")
+  const [page, setPage] = useState(FLOW.HOME)
   const [mode, setMode] = useState(null)
   const [minionType, setMinionType] = useState(null)
   const [selectedMinions, setSelectedMinions] = useState([])
   const [configsByMinionId, setConfigsByMinionId] = useState({})
   const [minionConfigs, setMinionConfigs] = useState(null)
+  const [manaByPlayer, setManaByPlayer] = useState({ P1: 30, P2: 30 })
+  const [boardState, setBoardState] = useState(() => createEmptyBoard())
 
   const updateConfig = (minionId, patch) => {
     setConfigsByMinionId((prev) => {
@@ -25,56 +41,100 @@ export default function App() {
     })
   }
 
-  if (page === "home") {
-    return <HomePage onStart={() => setPage("mode")} />
+  const minionTypes = useMemo(() => {
+    return (minionConfigs ?? []).map((minion) => ({
+      id: minion.id,
+      typeId: minion.id,
+      name: minion.config?.name?.trim() || minion.label,
+      defense: Number(minion.config?.defense) || 0,
+      strategy: minion.config?.strategy?.trim() || "",
+      price: 10,
+    }))
+  }, [minionConfigs])
+
+  const handleSpawn = ({ minionType: type, owner, row, col }) => {
+    const price = Number(type?.price ?? 0)
+    const key = `${row},${col}`
+    const targetCell = boardState[key]
+
+    if (!type || !targetCell || targetCell.minion) return false
+    if ((manaByPlayer[owner] ?? 0) < price) return false
+
+    const minion = {
+      id: `${type.id}-${owner}-${Date.now()}`,
+      typeId: type.typeId ?? type.id,
+      name: type.name,
+      defense: type.defense,
+      strategy: type.strategy,
+      hp: 100,
+      owner,
+      row,
+      col,
+    }
+
+    setManaByPlayer((current) => ({
+      ...current,
+      [owner]: current[owner] - price,
+    }))
+    setBoardState((current) => ({
+      ...current,
+      [key]: { ...current[key], minion },
+    }))
+    return true
   }
 
-  if (page === "mode") {
+  if (page === FLOW.HOME) {
+    return <HomePage onStart={() => setPage(FLOW.MODE)} />
+  }
+
+  if (page === FLOW.MODE) {
     return (
       <ModeSelectPage
-        onBack={() => setPage("home")}
+        onBack={() => setPage(FLOW.HOME)}
         onSelectMode={(modeKey) => {
           setMode(modeKey)
-          setPage("minionType")
+          setPage(FLOW.MINION_TYPE)
         }}
       />
     )
   }
 
-  if (page === "minionType") {
+  if (page === FLOW.MINION_TYPE) {
     return (
       <MinionTypePage
-        onBack={() => setPage("mode")}
+        onBack={() => setPage(FLOW.MODE)}
         onConfirm={(type) => {
           setMinionType(type)
-          setPage("minionSelect")
+          setPage(FLOW.MINION_SELECT)
         }}
       />
     )
   }
 
-  if (page === "minionSelect") {
+  if (page === FLOW.MINION_SELECT) {
     return (
       <ChooseMinionPage
         minionType={minionType}
-        onBack={() => setPage("minionType")}
+        onBack={() => setPage(FLOW.MINION_TYPE)}
         onContinue={(payload) => {
           setSelectedMinions(payload.selectedMinions)
           setConfigsByMinionId({})
           setMinionConfigs(null)
-          setPage("minionStrategy")
+          setManaByPlayer({ P1: 30, P2: 30 })
+          setBoardState(createEmptyBoard())
+          setPage(FLOW.MINION_STRATEGY)
         }}
       />
     )
   }
 
-  if (page === "minionStrategy") {
+  if (page === FLOW.MINION_STRATEGY) {
     return (
       <MinionStrategyPage
         selectedMinions={selectedMinions}
         configs={configsByMinionId}
         onUpdateConfig={updateConfig}
-        onBack={() => setPage("minionSelect")}
+        onBack={() => setPage(FLOW.MINION_SELECT)}
         onFinishAll={() => {
           const payload = selectedMinions.map((minion) => ({
             id: minion.id,
@@ -83,31 +143,39 @@ export default function App() {
             config: configsByMinionId[minion.id],
           }))
           setMinionConfigs(payload)
-          setPage("game")
+          setBoardState(createEmptyBoard())
+          setManaByPlayer({ P1: 30, P2: 30 })
+          setPage(FLOW.GAME)
         }}
       />
     )
   }
 
-  // ✅ หน้าเกม + ปุ่ม back กลับ home (ขั้นต่ำตามที่ขอ)
-  if (page === "game") {
+  if (page === FLOW.GAME) {
     return (
       <GamePage
-        onBack={() => setPage("minionStrategy")}
-        minionConfigs={minionConfigs}
+        onBack={() => setPage(FLOW.MINION_STRATEGY)}
+        minionTypes={minionTypes}
+        boardState={boardState}
+        manaByPlayer={manaByPlayer}
+        onSpawnMinion={handleSpawn}
       />
     )
   }
 
-  // fallback กัน page เพี้ยน
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-      <button
-        className="px-6 py-3 rounded bg-white/10 hover:bg-white/15"
-        onClick={() => setPage("home")}
-      >
-        Go Home
-      </button>
-    </div>
+    <PageShell
+      bg={ASSETS.homeBg}
+      innerClassName="flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center"
+    >
+      <PageTitle
+        title="Something went wrong"
+        subtitle="Unknown screen state."
+        className={pageUi.titleBlock}
+      />
+      <Button variant="primary" type="button" onClick={() => setPage(FLOW.HOME)}>
+        Go home
+      </Button>
+    </PageShell>
   )
 }

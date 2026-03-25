@@ -258,6 +258,37 @@ public class GameService {
         // ถ้าไม่ throw = grammar ถูก
     }
 
+    public Map<String, Object> validateStrategyInput(String strategy) {
+        if (strategy == null || strategy.isBlank()) {
+            return Map.of(
+                    "valid", false,
+                    "ok", false,
+                    "message", "Strategy must not be empty"
+            );
+        }
+
+        String normalized = strategy.toLowerCase();
+        boolean hasKeyword = normalized.contains("move")
+                || normalized.contains("shoot")
+                || normalized.contains("if")
+                || normalized.contains("while");
+
+        if (!hasKeyword) {
+            return Map.of(
+                    "valid", false,
+                    "ok", false,
+                    "message", "Strategy must include move, shoot, if, or while"
+            );
+        }
+
+        // TODO: plug in parser here (AST + evaluator)
+        return Map.of(
+                "valid", true,
+                "ok", true,
+                "message", "Valid strategy"
+        );
+    }
+
     // --- Logic สำหรับ Bot ---
     public void playBotTurn() {
         if (checkWinner() != 0) return; // ถ้าเกมจบแล้วไม่ต้องทำอะไร
