@@ -15,7 +15,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        "flex h-screen w-screen flex-col overflow-hidden bg-cover bg-center bg-no-repeat text-white",
+        "flex h-screen w-screen flex-col overflow-hidden bg-cover bg-center bg-no-repeat text-white ",
         className
       )}
       style={bg ? { backgroundImage: `url(${bg})` } : undefined}
@@ -77,7 +77,7 @@ export function PageSection({ children, className }) {
   return (
     <div
       className={cn(
-        "mt-10 rounded-2xl border border-white/10 bg-black/50 pt-8 backdrop-blur-md",
+        "mt-10 rounded-2xl ",
         className
       )}
     >

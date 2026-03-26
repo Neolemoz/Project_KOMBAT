@@ -75,6 +75,8 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
 
   return (
     <PageShell bg={ASSETS.modeBg}>
+        <div className="h-full w-full overflow-y-auto
+        [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <PageTopBar back={<BackButton onClick={onBack} />} />
 
       <PageTitle
@@ -87,10 +89,10 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
         Selected: {selectedNames.length ? selectedNames.join(", ") : "—"}
       </p>
       {limitMessage && (
-        <p className="mb-8 text-center text-sm text-amber-200">{limitMessage}</p>
+        <p className="mb-8 text-center text-sm text-amber-200 ">{limitMessage}</p>
       )}
 
-      <div className={cn("mb-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5", pageUi.mainGap)}>
+      <div className={cn("m-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 ", pageUi.mainGap)}>
         {MINIONS.map((minion) => {
           const isSelected = selectedMinions.includes(minion.id)
           return (
@@ -117,13 +119,16 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
                   draggable={false}
                 />
               </div>
-              <span className="text-xs font-medium text-white md:text-sm">{minion.label}</span>
+              <span className="text-16px font-bold font-['Cinzel'] uppercase
+                     [text-shadow:_0_0_50px_#dc9e2e,_0_0_10px_#243496,_0_5px_10px_#000000]
+                     [-webkit-text-stroke:0.2px_#74665c]
+                     drop-shadow">{minion.label}</span>
             </button>
           )
         })}
       </div>
 
-      <PageSection className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
+      <PageSection className=" flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
         <Button
           variant={p1Confirmed ? "primary" : "secondary"}
           type="button"
@@ -151,6 +156,7 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
           OK (P2)
         </Button>
       </PageSection>
+        </div>
     </PageShell>
   )
 }

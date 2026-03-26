@@ -19,26 +19,29 @@ export default function ModeSelectPage({ onBack, onSelectMode }) {
         className={pageUi.titleBlock}
       />
 
-      <div className={cn("grid sm:grid-cols-3", pageUi.mainGap)}>
+      <div className={cn("flex flex-col sm:flex-row justify-center items-center gap-20 ", pageUi.mainGap)}>
         {modes.map((mode) => (
           <button
             key={mode.key}
             type="button"
             onClick={() => onSelectMode(mode.key)}
-            className={cn(
-              "flex flex-col items-center p-4",
-              pageUi.card
-            )}
+            className="relative flex w-full max-w-[320px] h-[350px] items-center justify-center
+            overflow-hidden rounded-xl transition-transform hover:-translate-y-2 group mt-8 "
+            style={{ height: "clamp(380px, 37vh, 500px)" }}
           >
-            <div className="mb-3 flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/40">
               <img
                 src={mode.img}
-                alt=""
-                className="max-h-full max-w-full object-contain"
-                draggable={false}
+                alt={mode.label}
+                className="w-full h-full max-w-full object-contain"
+                draggable="false"
               />
-            </div>
-            <span className="text-sm font-medium text-white">{mode.label}</span>
+                <div className="absolute bottom-11 left-0 right-0 flex justify-center">
+                    <span className="text-16px font-semibold font-['Cinzel'] uppercase
+                     bg-gradient-to-r from-[#844d17] to-[#1b89e2] bg-clip-text text-transparent
+                     [-webkit-text-stroke:0.2px_#74665c]
+                     drop-shadow">{mode.label}</span>
+                </div>
+
           </button>
         ))}
       </div>
