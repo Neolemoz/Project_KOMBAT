@@ -7,6 +7,7 @@ public class Hex {
     private final int row;
     private final int col;
     private boolean isSpawnable = false;
+    private boolean isBuyable = false;
     private Minion occupant = null;
 
     @JsonIgnore
@@ -19,6 +20,9 @@ public class Hex {
 
     public boolean isSpawnable() { return isSpawnable; }
     public void setSpawnable(boolean spawnable) { isSpawnable = spawnable; }
+
+    public boolean isBuyable() { return isBuyable; }
+    public void setBuyable(boolean buyable) { isBuyable = buyable; }
 
     public Minion getOccupant() { return occupant; }
     public void setOccupant(Minion m) { this.occupant = m; }

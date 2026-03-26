@@ -3,6 +3,12 @@ package main.backend;
 import java.util.*;
 import java.util.regex.*;
 
+// ═══════════════════════════════════════════════════════
+//  KOMBAT — Standalone Terminal Runner
+//  compile:  javac Kombat.java
+//  run:      java Kombat
+// ═══════════════════════════════════════════════════════
+
 public class Kombat {
 
     // ──────────────────────────────────────────────────
@@ -13,7 +19,7 @@ public class Kombat {
     static final int    INIT_HP      = 100;
     static final long   TURN_BUDGET  = 100;
     static final double INTEREST     = 5.0;
-    static final int    MAX_TURNS    = 50;
+    static final int    MAX_TURNS    = 200;
 
     // ──────────────────────────────────────────────────
     // MODEL
