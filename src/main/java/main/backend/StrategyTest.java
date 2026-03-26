@@ -60,9 +60,6 @@ public class StrategyTest {
         }
     }
 
-    // ========================================================
-    //  TEST 1: โหลด strategy จากไฟล์แล้ว parse + รัน
-    // ========================================================
     static void testLoadFromFile() {
         header("1. LOAD STRATEGY FROM FILE: " + STRATEGY_FILE_PATH);
 
@@ -117,9 +114,6 @@ public class StrategyTest {
                 myMinion.getRow(), myMinion.getCol(), enemy.getHp(), enemy.isAlive());
     }
 
-    // ========================================================
-    //  TEST 2: PARSER
-    // ========================================================
     static void testParser() {
         header("2. PARSER");
 
@@ -146,9 +140,6 @@ public class StrategyTest {
         }
     }
 
-    // ========================================================
-    //  TEST 3: MOVE
-    // ========================================================
     static void testMove() {
         header("3. MOVE COMMAND");
 
@@ -192,9 +183,6 @@ public class StrategyTest {
         else fail("move occupied", "moved to row=" + m.getRow());
     }
 
-    // ========================================================
-    //  TEST 4: SHOOT (แก้ bug shoot lethal)
-    // ========================================================
     static void testShoot() {
         header("4. SHOOT COMMAND");
 
@@ -231,8 +219,6 @@ public class StrategyTest {
         if (tank.getHp() == 99) pass("shoot vs high defense: damage=1 ");
         else fail("shoot min damage", "hp=" + tank.getHp());
 
-        // ✅ แก้ bug shoot lethal: ตรวจ neighbor ก่อนวาง minion
-        // killer อยู่ (3,5) → row=3 (odd) → downright = (4,5)
         int[] nb = gs.getNeighbor(3, 5, "downright");
         System.out.printf("  [debug] neighbor(3,5,downright)=(%d,%d)%n", nb[0], nb[1]);
 
@@ -256,9 +242,6 @@ public class StrategyTest {
             fail("shoot lethal", "hp=" + weakTarget.getHp() + " neighbor=(" + nb[0] + "," + nb[1] + ")");
     }
 
-    // ========================================================
-    //  TEST 5: GAME STATE OUTPUT
-    // ========================================================
     static void testGameState() {
         header("5. GAME STATE OUTPUT");
 
@@ -292,9 +275,6 @@ public class StrategyTest {
         else fail("P2 budget", "budget=" + p2.getBudget());
     }
 
-    // ========================================================
-    //  TEST 6: VARIABLES
-    // ========================================================
     static void testVariables() {
         header("6. VARIABLES");
 
@@ -334,9 +314,6 @@ public class StrategyTest {
         else fail("10/3", "" + m.getMemory().get("result"));
     }
 
-    // ========================================================
-    //  MAIN
-    // ========================================================
     public static void main(String[] args) {
         System.out.println("╔══════════════════════════════════╗");
         System.out.println("║   KOMBAT Strategy Test Suite     ║");
