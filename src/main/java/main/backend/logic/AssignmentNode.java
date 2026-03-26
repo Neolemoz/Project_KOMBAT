@@ -8,6 +8,10 @@ public class AssignmentNode implements Node {
         this.identifier = identifier;
         this.expression = expression;
     }
-    public String getIdentifier() { return identifier; }
-    public ExpressionNode getExpression() { return expression; }
+    public String getIdentifier() {
+        return identifier;
+    }
+    public ExpressionNode getExpression() {
+        return expression;
+    }
 }

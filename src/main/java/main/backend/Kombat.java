@@ -3,17 +3,8 @@ package main.backend;
 import java.util.*;
 import java.util.regex.*;
 
-// ═══════════════════════════════════════════════════════
-//  KOMBAT — Standalone Terminal Runner
-//  compile:  javac Kombat.java
-//  run:      java Kombat
-// ═══════════════════════════════════════════════════════
-
 public class Kombat {
 
-    // ──────────────────────────────────────────────────
-    // CONFIG
-    // ──────────────────────────────────────────────────
     static final long   INIT_BUDGET  = 10000;
     static final long   MAX_BUDGET   = 50000;
     static final int    INIT_HP      = 100;
@@ -21,9 +12,6 @@ public class Kombat {
     static final double INTEREST     = 5.0;
     static final int    MAX_TURNS    = 200;
 
-    // ──────────────────────────────────────────────────
-    // MODEL
-    // ──────────────────────────────────────────────────
 
     static class Player {
         int id;
@@ -125,10 +113,6 @@ public class Kombat {
         }
     }
 
-    // ──────────────────────────────────────────────────
-    // AST NODES
-    // ──────────────────────────────────────────────────
-
     interface Node {}
     interface Expr extends Node { long eval(Ctx ctx); }
 
@@ -166,9 +150,6 @@ public class Kombat {
     static class WhileNode implements Node { Expr cond; Node body; WhileNode(Expr c,Node b){cond=c;body=b;} }
     static class ActionNode implements Node { String action, dir; Expr amount; ActionNode(String a,String d,Expr e){action=a;dir=d;amount=e;} }
 
-    // ──────────────────────────────────────────────────
-    // CONTEXT
-    // ──────────────────────────────────────────────────
 
     static class Ctx {
         Minion minion; GameState gs;
@@ -242,10 +223,6 @@ public class Kombat {
         }
     }
 
-    // ──────────────────────────────────────────────────
-    // TOKENIZER
-    // ──────────────────────────────────────────────────
-
     static List<String> tokenize(String src) {
         List<String> tokens = new ArrayList<>();
         Pattern p = Pattern.compile("(#.*)|([a-zA-Z_]\\w*)|(\\d+)|([+\\-*/%^(){}<>=])");
@@ -256,10 +233,6 @@ public class Kombat {
         }
         return tokens;
     }
-
-    // ──────────────────────────────────────────────────
-    // PARSER
-    // ──────────────────────────────────────────────────
 
     static class Parser {
         List<String> tokens; int pos;
@@ -311,7 +284,7 @@ public class Kombat {
             Expr amount = null;
             if (!action.equals("done") && pos < tokens.size()) {
                 String nx = peek();
-                if (nx.matches("up|down|upleft|upright|downleft|downright|right|left")) {
+                if (nx.matches("up|down|upleft|upright|downleft|downright")) {
                     dir = next();
                     // map right/left to nearest hex equivalent
                     if (dir.equals("right")) dir = "upright";
@@ -322,7 +295,6 @@ public class Kombat {
             return new ActionNode(action, dir, amount);
         }
 
-        // Expression precedence: comparison < additive < term < power < atom
         Expr expr() {
             Expr left = additive();
             while (pos < tokens.size() && (peek().equals(">") || peek().equals("<"))) {
@@ -368,10 +340,6 @@ public class Kombat {
             if (!got.equals(expected)) throw new RuntimeException("Expected '" + expected + "' got '" + got + "'");
         }
     }
-
-    // ──────────────────────────────────────────────────
-    // EVALUATOR
-    // ──────────────────────────────────────────────────
 
     static class Evaluator {
         boolean done = false;
@@ -428,6 +396,10 @@ public class Kombat {
             }
         }
     }
+
+    // ──────────────────────────────────────────────────
+    // BOARD DISPLAY
+    // ──────────────────────────────────────────────────
 
     static void printBoard(GameState gs) {
         System.out.println();
@@ -544,7 +516,6 @@ public class Kombat {
         showWinner(winner(gs, MAX_TURNS));
     }
 
-    // ── setup minion + strategy ──
     static Minion setupMinion(GameState gs, Player p, int row, int col) {
         System.out.print("  Defense (default 5): ");
         String ds = sc.nextLine().trim();
@@ -553,6 +524,7 @@ public class Kombat {
         System.out.println("  เลือก strategy:");
         System.out.println("  [a] Aggressive Rusher — วิ่งเข้าหา ยิงทุก budget");
         System.out.println("  [b] Cautious Sniper   — รักษาระยะ ยิงปานกลาง ถ้าใกล้ถอย");
+        System.out.println("  [d] Default Strategy  — เดินและยิงตามกติกาหลักของเกม");
         System.out.println("  [f] โหลดจากไฟล์: f /path/to/script.txt");
         System.out.println("  หรือพิมพ์ script เอง จบด้วย END");
         Node ast = readScript(p.id);
@@ -563,7 +535,6 @@ public class Kombat {
         return m;
     }
 
-    // ── อ่าน script จนเจอ END ──
     static Node readScript(int pid) {
         StringBuilder sb = new StringBuilder();
         boolean first = true;
@@ -644,18 +615,17 @@ public class Kombat {
                     "    else if (dir - 1) then shoot upright 200\n" +
                     "    else shoot up 200\n" +
                     "  } else done\n" +
-                    "} else if (loc) then {\n" +                  // dist == 1 → ถอยหนีทิศตรงข้าม
+                    "} else if (loc) then {\n" +
                     "  if (dir - 5) then move upright\n" +
                     "  else if (dir - 4) then move up\n" +
                     "  else if (dir - 3) then move upleft\n" +
                     "  else if (dir - 2) then move downleft\n" +
                     "  else if (dir - 1) then move downright\n" +
                     "  else move down\n" +
-                    "} else {\n" +                                // ไม่เห็น → เดินตัดแผนที่
+                    "} else {\n" +
                     "  if (row - 5) then move up\n" +
                     "  else move upleft\n" +
                     "}\n";
-
 
     static final String STRATEGY_DEFAULT =
             "t = t + 1\n" +
@@ -716,9 +686,8 @@ public class Kombat {
                     "  }\n" +
                     "}\n";
 
-    // ── รัน strategy ของ minion 1 turn ──
+
     static void runMinion(GameState gs, Minion m, int pid) {
-        // kept for compatibility — not used in simultaneous mode
     }
 
     // ── pending action ──
