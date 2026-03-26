@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import GameTurnBanner from "../components/game/GameTurnBanner"
 import HexBoard from "../components/game/HexBoard"
 import SpawnModal from "../components/game/SpawnModal"
@@ -7,6 +7,61 @@ import { ASSETS } from "../constants/assets"
 import { createInitialBoardState } from "../utils/hexUtils"
 
 const HEX_COST = 1000
+const DEFAULT_BOARD_ZOOM = 0.74
+const MIN_BOARD_ZOOM = 0.34
+const MAX_BOARD_ZOOM = 2.8
+
+function StatIcon({ kind }) {
+  const shared = "h-4 w-4"
+
+  if (kind === "mana") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={shared} aria-hidden>
+        <path d="M12 2 5 12l7 10 7-10-7-10Z" stroke="currentColor" strokeWidth="1.7" />
+        <path d="M12 6.5 8.6 12 12 17.5 15.4 12 12 6.5Z" fill="currentColor" opacity="0.35" />
+      </svg>
+    )
+  }
+
+  if (kind === "units") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={shared} aria-hidden>
+        <circle cx="8" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="16" cy="8" r="2.1" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M4.8 18.5c.8-2.7 2.7-4 5.2-4s4.4 1.3 5.2 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M14.1 18c.5-1.9 1.9-3 3.9-3 1 0 1.8.2 2.5.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (kind === "hp") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={shared} aria-hidden>
+        <path d="M12 20.2 4.7 12.8C2.8 11 2.8 8 4.7 6.2c1.8-1.8 4.8-1.8 6.6 0l.7.7.7-.7c1.8-1.8 4.8-1.8 6.6 0 1.8 1.8 1.8 4.8 0 6.6L12 20.2Z" stroke="currentColor" strokeWidth="1.6" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={shared} aria-hidden>
+      <path d="M5 12h14M12 5v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function StatCard({ icon, label, value, valueClassName = "text-white" }) {
+  return (
+    <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(2,6,23,0.18)] backdrop-blur-md transition-all duration-200">
+      <div className="flex items-center gap-3 text-slate-300">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-cyan-100 shadow-[0_0_18px_rgba(103,232,249,0.18)]">
+          <StatIcon kind={icon} />
+        </span>
+        <p className="text-xs uppercase tracking-[0.22em] text-slate-300/80">{label}</p>
+      </div>
+      <p className={`mt-3 text-2xl font-bold ${valueClassName}`}>{value}</p>
+    </div>
+  )
+}
 
 function BoardParticles() {
   const particles = [
@@ -110,49 +165,44 @@ function PlayerStatusCard({
   return (
     <aside
       className={[
-        "flex h-full min-h-0 w-full max-w-[260px] flex-col overflow-hidden rounded-3xl border border-white/10 bg-[rgba(5,10,24,0.88)] p-4 text-white shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl transition",
-        active ? "ring-2 ring-cyan-300/60 shadow-[0_0_35px_rgba(34,211,238,0.2)]" : "opacity-80",
+        "relative flex h-full min-h-[calc(100vh-13rem)] w-full max-w-[320px] flex-col overflow-hidden rounded-[32px] border border-white/10 bg-white/5 p-6 text-white shadow-[0_24px_80px_rgba(2,6,23,0.5)] backdrop-blur-md transition-all duration-200",
+        active
+          ? "ring-1 ring-cyan-300/60 shadow-[0_0_40px_rgba(34,211,238,0.22),0_24px_80px_rgba(2,6,23,0.55)]"
+          : "opacity-90 shadow-[0_24px_80px_rgba(2,6,23,0.4)]",
       ].join(" ")}
     >
-      <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_42%)] opacity-70" />
+      <div className={`pointer-events-none absolute inset-0 rounded-[32px] ${active ? "bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.12),_transparent_50%)]" : "bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_55%)]"}`} />
+      <p className="relative z-10 text-xs uppercase tracking-[0.3em] text-cyan-100/70">
         {label ?? `Player ${player === "P1" ? "1" : "2"}`}
       </p>
-      <p className="mt-2 text-[2rem] font-bold text-white">{active ? "Active Turn" : "Waiting"}</p>
+      <p className="relative z-10 mt-3 text-[2.15rem] font-bold tracking-wide text-white">
+        {active ? "Active Turn" : "Waiting"}
+      </p>
 
-      <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Mana</p>
-          <p className="mt-2 text-2xl font-bold text-cyan-100">{mana}</p>
+      <div className="no-scrollbar relative z-10 mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <StatCard icon="mana" label="Mana" value={mana} valueClassName="text-cyan-100" />
+        <StatCard icon="units" label="Units on Board" value={minionCount} valueClassName="text-white" />
+        <StatCard icon="hp" label="Total HP" value={totalHp} valueClassName="text-emerald-200" />
+
+        <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(2,6,23,0.18)] backdrop-blur-md transition-all duration-200">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-300/80">Hex Cost</p>
+          <p className="mt-3 text-xl font-semibold text-amber-200">{hexSpend}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Units on Board</p>
-          <p className="mt-2 text-lg font-semibold text-white">{minionCount}</p>
+        <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(2,6,23,0.18)] backdrop-blur-md transition-all duration-200">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-300/80">Strategy Cost</p>
+          <p className="mt-3 text-xl font-semibold text-rose-200">{strategySpend}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Total HP</p>
-          <p className="mt-2 text-lg font-semibold text-emerald-200">{totalHp}</p>
+        <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(2,6,23,0.18)] backdrop-blur-md transition-all duration-200">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-300/80">Interest This Turn</p>
+          <p className="mt-3 text-xl font-semibold text-emerald-200">{interestGain}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Hex Cost</p>
-          <p className="mt-2 text-lg font-semibold text-amber-200">{hexSpend}</p>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Strategy Cost</p>
-          <p className="mt-2 text-lg font-semibold text-rose-200">{strategySpend}</p>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Interest This Turn</p>
-          <p className="mt-2 text-lg font-semibold text-emerald-200">{interestGain}</p>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Recent Actions</p>
-          <div className="mt-2 max-h-28 space-y-1 overflow-y-auto pr-1 text-xs leading-5 text-slate-200">
+        <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(2,6,23,0.18)] backdrop-blur-md transition-all duration-200">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-300/80">Recent Actions</p>
+          <div className="no-scrollbar mt-3 max-h-28 space-y-1 overflow-y-auto text-xs leading-5 text-slate-200">
             {recentMessages.length ? (
               recentMessages.map((message, index) => (
                 <p key={`${player}-recent-${index}`}>{message}</p>
@@ -200,10 +250,15 @@ export default function GamePage({
   syncedTurnNumber = 1,
   syncedActivePlayer = "P1",
 }) {
+  const boardViewportRef = useRef(null)
+  const isDraggingBoardRef = useRef(false)
+  const dragOriginRef = useRef({ x: 0, y: 0, left: 0, top: 0 })
+  const hasCenteredBoardRef = useRef(false)
   const [selectedHex, setSelectedHex] = useState(null)
   const [pendingPurchaseHex, setPendingPurchaseHex] = useState(null)
   const [isSpawnModalOpen, setIsSpawnModalOpen] = useState(false)
   const [isResolvingTurn, setIsResolvingTurn] = useState(false)
+  const [boardZoom, setBoardZoom] = useState(DEFAULT_BOARD_ZOOM)
   const [localBoardState, setLocalBoardState] = useState(() =>
     createInitialBoardState(8, 8, boardState)
   )
@@ -296,11 +351,13 @@ export default function GamePage({
   const normalizedMode = String(mode ?? "DUEL").toUpperCase()
   const isSolitaireMode = normalizedMode === "SOLITAIRE"
   const isAutoMode = normalizedMode === "AUTO"
-  const modeLabel =
-    isAutoMode ? "Auto" : isSolitaireMode ? "Solitaire" : "Duel"
   const isBotTurn = (isSolitaireMode && activePlayer === "P2") || isAutoMode
+  const boardSize = Math.round(47 * boardZoom)
+  const boardGap = Math.max(4, Math.round(4 * boardZoom))
+  const boardZoomDisplay = Math.round((boardZoom - DEFAULT_BOARD_ZOOM) * 100)
 
   const isFreeSpawnTurn = turnNumber === 1 && (countsByPlayer[activePlayer] ?? 0) === 0
+  const mustSpawnBeforeEndTurn = turnNumber === 1 && (countsByPlayer[activePlayer] ?? 0) === 0
   const latestActionHighlight = useMemo(() => {
     const actionable = [...battleLog]
       .reverse()
@@ -363,6 +420,15 @@ export default function GamePage({
 
     return () => window.clearTimeout(timeoutId)
   }, [isBotTurn, isResolvingTurn, onBotTurnServer])
+
+  useEffect(() => {
+    const viewport = boardViewportRef.current
+    if (!viewport || hasCenteredBoardRef.current) return
+
+    viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2)
+    viewport.scrollTop = 0
+    hasCenteredBoardRef.current = true
+  }, [boardGap, boardSize])
 
   const handleConfirmBuyHex = async () => {
     const hex = pendingPurchaseHex
@@ -448,6 +514,7 @@ export default function GamePage({
   const handleEndTurn = async () => {
     if (isResolvingTurn) return
     if (isBotTurn) return
+    if (mustSpawnBeforeEndTurn) return
 
     setIsResolvingTurn(true)
     setSelectedHex(null)
@@ -464,6 +531,69 @@ export default function GamePage({
     }
   }
 
+  const applyBoardZoom = (nextZoom, pointer) => {
+    const viewport = boardViewportRef.current
+    const clampedZoom = Math.min(MAX_BOARD_ZOOM, Math.max(MIN_BOARD_ZOOM, Number(nextZoom.toFixed(2))))
+
+    if (!viewport) {
+      setBoardZoom(clampedZoom)
+      return
+    }
+
+    const previousZoom = boardZoom
+    const rect = viewport.getBoundingClientRect()
+    const offsetX = pointer ? pointer.clientX - rect.left : viewport.clientWidth / 2
+    const offsetY = pointer ? pointer.clientY - rect.top : viewport.clientHeight / 2
+    const contentX = viewport.scrollLeft + offsetX
+    const contentY = viewport.scrollTop + offsetY
+    const zoomRatio = clampedZoom / previousZoom
+
+    setBoardZoom(clampedZoom)
+
+    window.requestAnimationFrame(() => {
+      viewport.scrollLeft = Math.max(0, contentX * zoomRatio - offsetX)
+      viewport.scrollTop = Math.max(0, contentY * zoomRatio - offsetY)
+    })
+  }
+
+  const handleBoardWheel = (event) => {
+    event.preventDefault()
+    const direction = event.deltaY > 0 ? -0.12 : 0.12
+    applyBoardZoom(boardZoom + direction, event)
+  }
+
+  const handleBoardDragStart = (event) => {
+    if (event.button !== 0) return
+    const viewport = boardViewportRef.current
+    if (!viewport) return
+
+    isDraggingBoardRef.current = true
+    dragOriginRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      left: viewport.scrollLeft,
+      top: viewport.scrollTop,
+    }
+    viewport.style.cursor = "grabbing"
+  }
+
+  const handleBoardDragMove = (event) => {
+    if (!isDraggingBoardRef.current) return
+    const viewport = boardViewportRef.current
+    if (!viewport) return
+
+    const deltaX = event.clientX - dragOriginRef.current.x
+    const deltaY = event.clientY - dragOriginRef.current.y
+    viewport.scrollLeft = dragOriginRef.current.left - deltaX
+    viewport.scrollTop = dragOriginRef.current.top - deltaY
+  }
+
+  const handleBoardDragEnd = () => {
+    const viewport = boardViewportRef.current
+    isDraggingBoardRef.current = false
+    if (viewport) viewport.style.cursor = "grab"
+  }
+
   return (
     <PageShell
       bg={ASSETS.battleBg}
@@ -478,10 +608,25 @@ export default function GamePage({
             <span className="inline-block w-10 sm:w-14" aria-hidden />
           )
         }
-        center={<GameTurnBanner turnNumber={turnNumber} activePlayer={activePlayer} />}
+        center={
+          <GameTurnBanner
+            turnNumber={turnNumber}
+            activePlayer={activePlayer}
+          />
+        }
+        right={
+          <button
+            type="button"
+            onClick={handleEndTurn}
+            disabled={isResolvingTurn || isBotTurn || mustSpawnBeforeEndTurn}
+            className="rounded-2xl border border-orange-200/20 bg-[linear-gradient(135deg,_#fb923c_0%,_#ef4444_100%)] px-5 py-3 text-sm font-semibold tracking-[0.12em] text-white shadow-[0_14px_34px_rgba(239,68,68,0.38),0_0_20px_rgba(251,146,60,0.24)] transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_18px_44px_rgba(239,68,68,0.46),0_0_26px_rgba(251,146,60,0.32)] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-orange-900/60 disabled:opacity-60"
+          >
+            {isResolvingTurn && isBotTurn ? "BOT PLAYING..." : isResolvingTurn ? "RESOLVING..." : "END TURN"}
+          </button>
+        }
       />
 
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)_240px] gap-3 overflow-hidden">
+      <div className="grid min-h-0 flex-1 grid-cols-[320px_minmax(0,1fr)_320px] gap-4 overflow-hidden">
         <PlayerStatusCard
           player="P1"
           label="Player 1"
@@ -495,21 +640,63 @@ export default function GamePage({
           recentMessages={recentMessagesByPlayer.P1}
         />
 
-        <main className="relative flex min-h-0 items-center justify-center overflow-hidden">
-          <div className="absolute left-1/2 top-1/2 h-[320px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/10 blur-[140px]" />
-          <BoardParticles />
+        <main className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-[36px] border border-white/10 bg-[radial-gradient(circle_at_center,_rgba(74,222,255,0.08),_rgba(30,41,59,0.05)_38%,_rgba(2,6,23,0.18)_100%)] shadow-[0_32px_100px_rgba(2,6,23,0.34)]">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(56,189,248,0.12),_transparent_28%),radial-gradient(circle_at_18%_30%,_rgba(103,232,249,0.08),_transparent_22%),radial-gradient(circle_at_82%_72%,_rgba(129,140,248,0.12),_transparent_24%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_44%,_rgba(2,6,23,0.28)_100%)]" />
+          <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[32px] p-0">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/8 to-transparent" />
+            <BoardParticles />
+            <div className="pointer-events-none absolute right-2 top-2 z-20">
+              <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-[rgba(7,12,28,0.58)] px-1.5 py-1.5 shadow-[0_16px_40px_rgba(2,6,23,0.45)] backdrop-blur-md transition-all duration-200">
+                <button
+                  type="button"
+                  onClick={() => applyBoardZoom(boardZoom - 0.1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-95"
+                  aria-label="Zoom out board"
+                >
+                  -
+                </button>
+                <span className="min-w-[3.6rem] text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-white/75">
+                  {boardZoomDisplay > 0 ? `+${boardZoomDisplay}%` : `${boardZoomDisplay}%`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => applyBoardZoom(boardZoom + 0.1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-95"
+                  aria-label="Zoom in board"
+                >
+                  +
+                </button>
+              </div>
+            </div>
 
-          <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-[rgba(4,8,22,0.58)] p-3 sm:p-4 shadow-[0_20px_70px_rgba(0,0,0,0.45)] backdrop-blur-md">
-            <HexBoard
-              rows={8}
-              cols={8}
-              boardState={localBoardState}
-              activePlayer={activePlayer}
-              actionHighlight={latestActionHighlight}
-              buyHex={handleRequestBuyHex}
-              spawnMinion={handleOpenSpawnModal}
-              className="flex h-full w-full min-h-0 min-w-0 items-center justify-center"
-            />
+            <div
+              ref={boardViewportRef}
+              className="no-scrollbar relative z-10 min-h-0 flex-1 overflow-auto"
+              style={{ cursor: "grab" }}
+              onWheel={handleBoardWheel}
+              onMouseDown={handleBoardDragStart}
+              onMouseMove={handleBoardDragMove}
+              onMouseUp={handleBoardDragEnd}
+              onMouseLeave={handleBoardDragEnd}
+            >
+              <div className="flex min-h-full min-w-full items-center justify-center px-6 pb-1 pt-1">
+                <div className="flex items-center justify-center">
+                  <HexBoard
+                    rows={8}
+                    cols={8}
+                    boardState={localBoardState}
+                    activePlayer={activePlayer}
+                    actionHighlight={latestActionHighlight}
+                    buyHex={handleRequestBuyHex}
+                    spawnMinion={handleOpenSpawnModal}
+                    size={boardSize}
+                    gap={boardGap}
+                    className="flex min-h-0 min-w-0 items-center justify-center"
+                  />
+                </div>
+              </div>
+            </div>
 
             <BuyHexModal
               open={Boolean(pendingPurchaseHex)}
@@ -543,34 +730,6 @@ export default function GamePage({
           interestGain={localInterestByPlayer.P2}
           recentMessages={recentMessagesByPlayer.P2}
         />
-      </div>
-
-      <div className="mt-3 grid shrink-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-2 text-center backdrop-blur-md">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Hex States</p>
-          <p className="mt-1 text-sm text-white/80">
-            Green = spawnable, yellow = buyable, occupied hexes show unit HP.
-          </p>
-          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-cyan-200/80">
-            Mode: {modeLabel}
-            {isSolitaireMode ? " · Bot resolves Player 2 automatically." : ""}
-            {isAutoMode ? " · Both players are controlled by bots." : ""}
-          </p>
-          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-400">
-            Buy: {activeTurnActions.boughtHex ? "used" : "available"} · Spawn: {activeTurnActions.spawned ? "used" : "available"}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={handleEndTurn}
-            disabled={isResolvingTurn || isBotTurn}
-            className="rounded-2xl bg-orange-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-900/60"
-          >
-            {isResolvingTurn && isBotTurn ? "BOT PLAYING..." : isResolvingTurn ? "RESOLVING..." : "END TURN"}
-          </button>
-        </div>
       </div>
 
     </PageShell>

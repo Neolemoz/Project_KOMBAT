@@ -385,6 +385,9 @@ public class GameService {
         if (gameState.isGameOver()) {
             return;
         }
+        if (!canEndCurrentTurn()) {
+            return;
+        }
 
         appendBattleLog(currentPlayerId, "turn", null,
                 String.format("Player %d resolved turn %d.", currentPlayerId, gameState.getTurnCount()),
@@ -418,6 +421,10 @@ public class GameService {
         endTurn(null);
     }
 
+    public boolean canEndCurrentTurn() {
+        return !mustSpawnFirstMinionThisTurn(currentPlayerId);
+    }
+
     private GameState getGame(Long gameId) {
         return gameState;
     }
@@ -440,6 +447,14 @@ public class GameService {
         game.setBoughtHexThisTurn(currentPlayerId, false);
         game.setSpawnedThisTurn(currentPlayerId, false);
         game.setActivePlayerId(currentPlayerId);
+    }
+
+    private boolean mustSpawnFirstMinionThisTurn(int playerId) {
+        if (gameState == null || gameState.getTurnCount() != 1) {
+            return false;
+        }
+        Player player = gameState.getPlayer(playerId);
+        return player != null && player.getMinions().isEmpty();
     }
 
     private void executeStrategyNode(Node node, MinionContext context, StrategyExecutionState state) {
