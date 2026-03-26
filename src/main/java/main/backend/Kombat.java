@@ -429,10 +429,6 @@ public class Kombat {
         }
     }
 
-    // ──────────────────────────────────────────────────
-    // BOARD DISPLAY
-    // ──────────────────────────────────────────────────
-
     static void printBoard(GameState gs) {
         System.out.println();
         // column header
@@ -496,10 +492,6 @@ public class Kombat {
             System.out.println();
         }
     }
-
-    // ──────────────────────────────────────────────────
-    // MAIN
-    // ──────────────────────────────────────────────────
 
     static Scanner sc = new Scanner(System.in);
 
@@ -608,14 +600,6 @@ public class Kombat {
         }
     }
 
-    // ──────────────────────────────────────────────────
-    // BUILT-IN STRATEGIES
-    // ──────────────────────────────────────────────────
-
-    // [A] Aggressive Rusher
-    // - วิ่งตรงเข้าหา opponent ทุก turn
-    // - เมื่อ adjacent → ยิงด้วย budget ทั้งหมดที่มี (ลบ 1 ค่า cost)
-    // - ถ้าไม่เห็น opponent → เดิน downright/down เพื่อตัดข้ามแผนที่
     static final String STRATEGY_RUSHER =
             "# Aggressive Rusher: rush in, spend all budget on attack\n" +
                     "loc = opponent\n" +
@@ -639,11 +623,6 @@ public class Kombat {
                     "  else move downright\n" +
                     "}\n";
 
-    // [B] Cautious Sniper
-    // - ถ้า opponent ห่าง > 2 → เดินเข้าหาแต่หยุดที่ระยะ 2
-    // - ถ้า opponent ห่าง == 2 → ยิง 200 ทุก turn (สม่ำเสมอ ไม่หมด budget)
-    // - ถ้า opponent adjacent (dist 1) → ถอยหนีทิศตรงข้าม
-    // - ถ้าไม่เห็น → เดิน up/upleft เพื่อตัดข้ามแผนที่
     static final String STRATEGY_SNIPER =
             "# Cautious Sniper: maintain distance 2, shoot steadily, retreat if cornered\n" +
                     "loc = opponent\n" +
@@ -677,7 +656,7 @@ public class Kombat {
                     "  else move upleft\n" +
                     "}\n";
 
-    // [D] Default (original strategy.txt)
+
     static final String STRATEGY_DEFAULT =
             "t = t + 1\n" +
                     "m = 0\n" +
@@ -686,10 +665,10 @@ public class Kombat {
                     "  opponentLoc = opponent\n" +
                     "  if (opponentLoc / 10 - 1)\n" +
                     "  then\n" +
-                    "    if (opponentLoc % 10 - 5) then move downleft\n" +
-                    "    else if (opponentLoc % 10 - 4) then move down\n" +
-                    "    else if (opponentLoc % 10 - 3) then move downright\n" +
-                    "    else if (opponentLoc % 10 - 2) then move upright\n" +
+                    "    if (opponentLoc % 10 - 5) then move upleft\n" +
+                    "    else if (opponentLoc % 10 - 4) then move downleft\n" +
+                    "    else if (opponentLoc % 10 - 3) then move down\n" +
+                    "    else if (opponentLoc % 10 - 2) then move downright\n" +
                     "    else if (opponentLoc % 10 - 1) then move upright\n" +
                     "    else move up\n" +
                     "  else if (opponentLoc)\n" +
@@ -723,6 +702,7 @@ public class Kombat {
                     "    while (3 - try) {\n" +
                     "      success = 1\n" +
                     "      dir = random % 6\n" +
+                    "      # (nearby <dir> % 10 + 1) ^ 2 is positive if adjacent cell in <dir> has no ally\n" +
                     "      if ((dir - 4) * (nearby upleft % 10 + 1) ^ 2) then move upleft\n" +
                     "      else if ((dir - 3) * (nearby downleft % 10 + 1) ^ 2) then move downleft\n" +
                     "      else if ((dir - 2) * (nearby down % 10 + 1) ^ 2) then move down\n" +
