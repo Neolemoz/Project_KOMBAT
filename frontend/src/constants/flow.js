@@ -7,4 +7,6 @@ export const FLOW = {
   MINION_STRATEGY: "minionStrategy",
   SHOP: "shop",
   GAME: "game",
+  ENDGAME: "endgame",
+  RULES: "rules",
 }

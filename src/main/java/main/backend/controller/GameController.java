@@ -38,6 +38,7 @@ public class GameController {
                 : "duel";
         gameService.setGameMode(mode.toLowerCase());
         gameService.init();
+        gameService.clearDefinedMinionTypes();
         broadcast();
         return gameService.getGameState();
     }
@@ -97,8 +98,22 @@ public class GameController {
             gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
         } else {
             long defense = Long.parseLong(payload.get("defense").toString());
-            gameService.spawnMinion(playerId, row, col, defense, (String) payload.get("strategy"));
+            gameService.spawnMinion(
+                    playerId,
+                    row,
+                    col,
+                    defense,
+                    (String) payload.get("strategy"),
+                    payload.get("name") == null ? "Minion" : payload.get("name").toString()
+            );
         }
+        broadcast();
+        return gameService.getGameState();
+    }
+
+    @PostMapping("/bot-turn")
+    public GameState botTurnRest() {
+        gameService.playBotTurn();
         broadcast();
         return gameService.getGameState();
     }
@@ -127,7 +142,14 @@ public class GameController {
             gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
         } else {
             long defense = Long.parseLong(payload.get("defense").toString());
-            gameService.spawnMinion(playerId, row, col, defense, (String) payload.get("strategy"));
+            gameService.spawnMinion(
+                    playerId,
+                    row,
+                    col,
+                    defense,
+                    (String) payload.get("strategy"),
+                    payload.get("name") == null ? "Minion" : payload.get("name").toString()
+            );
         }
         broadcast();
     }

@@ -3,14 +3,9 @@
 // size = radius of hex (center to corner)
 
 export function hexToPixelFlatTop(row, col, size) {
-  // flat-top:
-  // width = 2*size
-  // height = sqrt(3)*size
-  // horizontal step = 1.5*size
-  // vertical step = height
   const h = Math.sqrt(3) * size
   const x = (col - 1) * (1.5 * size)
-  const y = (row - 1) * h + ((col - 1) % 2) * (h / 2)
+  const y = (row - 1) * h + (col % 2 === 1 ? h / 2 : 0)
   return { x, y }
 }
 

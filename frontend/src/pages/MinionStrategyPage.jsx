@@ -13,6 +13,7 @@ import { Panel } from "../components/ui/Panel"
 import { ASSETS } from "../constants/assets"
 import { pageUi } from "../constants/pageUi"
 import { cn } from "../utils/cn"
+import { getTemplatesForMinion } from "../constants/strategyTemplates"
 
 const emptyValidation = { ok: false, message: null }
 const emptyConfig = {
@@ -33,7 +34,7 @@ function isPositiveDefense(value) {
 
 function normalizeConfig(minion, config = {}) {
   return {
-    name: config.name ?? minion?.label ?? "",
+    name: String(config.name ?? "").trim() || minion?.label || "",
     defense: config.defense ?? "",
     strategy: config.strategy ?? "",
     validationStatus:
@@ -207,6 +208,51 @@ export default function MinionStrategyPage({
     })
   }
 
+  const handleApplyTemplate = async (template) => {
+    if (!activeMinion || !template?.strategy) return
+
+    persistConfig(activeMinion.id, (current) => ({
+      ...current,
+      strategy: template.strategy,
+      validationStatus: null,
+    }))
+
+    setValidateLoading(true)
+    setValidateResult(null)
+
+    try {
+      const response = await validateStrategy({
+        strategy: template.strategy,
+      })
+
+      const nextValidation = {
+        ok: Boolean(response?.valid ?? response?.ok),
+        message: response?.error ?? response?.message ?? null,
+      }
+
+      persistConfig(activeMinion.id, (current) => ({
+        ...current,
+        strategy: template.strategy,
+        validationStatus: nextValidation,
+      }))
+      setValidateResult(nextValidation)
+    } catch (error) {
+      const nextValidation = {
+        ok: false,
+        message: error?.message || "Validation failed",
+      }
+
+      persistConfig(activeMinion.id, (current) => ({
+        ...current,
+        strategy: template.strategy,
+        validationStatus: nextValidation,
+      }))
+      setValidateResult(nextValidation)
+    } finally {
+      setValidateLoading(false)
+    }
+  }
+
   const handlePrev = () => {
     setSelectedIndex((index) => Math.max(0, index - 1))
   }
@@ -266,6 +312,8 @@ export default function MinionStrategyPage({
               <StrategyForm
                 minion={activeMinion}
                 value={activeConfig}
+                templates={getTemplatesForMinion(activeMinion)}
+                onApplyTemplate={handleApplyTemplate}
                 onChange={handleChange}
                 onPrev={handlePrev}
                 onNext={handleNext}

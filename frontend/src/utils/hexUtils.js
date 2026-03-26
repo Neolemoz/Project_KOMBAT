@@ -1,11 +1,17 @@
-export const HEX_DIRECTIONS = [
-  [0, -1],
-  [0, 1],
-  [-1, 0],
-  [1, 0],
-  [-1, 1],
-  [1, -1],
+const DIRECTIONS = [
+  "up",
+  "down",
+  "upleft",
+  "upright",
+  "downleft",
+  "downright",
 ]
+
+function normalizeOwner(owner) {
+  if (owner === "P1" || owner === "PLAYER_1") return "P1"
+  if (owner === "P2" || owner === "PLAYER_2") return "P2"
+  return null
+}
 
 function createEmptyCell(row, col) {
   return {
@@ -35,15 +41,21 @@ export function createInitialBoardState(rows = 8, cols = 8, existingBoard = {}) 
     for (let col = 1; col <= cols; col += 1) {
       const key = `${row},${col}`
       const existing = existingBoard[key] ?? {}
-      const owner = zones.P1.has(key) ? "P1" : zones.P2.has(key) ? "P2" : existing.owner ?? null
+      const zoneOwner = zones.P1.has(key) ? "P1" : zones.P2.has(key) ? "P2" : null
+      const owner = normalizeOwner(zoneOwner ?? existing.owner)
       const minion = existing.minion ?? null
 
       next[key] = {
         ...createEmptyCell(row, col),
+        ...existing,
+        row,
+        col,
         owner,
-        isSpawnable: Boolean(owner),
         minion,
+        isSpawnable: Boolean(existing.isSpawnable ?? owner),
         isOccupied: Boolean(minion),
+        isBuyable: Boolean(existing.isBuyable),
+        isSelected: Boolean(existing.isSelected),
       }
     }
   }
@@ -51,40 +63,75 @@ export function createInitialBoardState(rows = 8, cols = 8, existingBoard = {}) 
   return next
 }
 
-export function getNeighborCoords(row, col) {
-  return HEX_DIRECTIONS.map(([rowDelta, colDelta]) => ({
-    row: row + rowDelta,
-    col: col + colDelta,
-  }))
+function getNeighborCoord(row, col, direction) {
+  const isOddCol = col % 2 !== 0
+
+  switch (direction) {
+    case "up":
+      return { row: row - 1, col: col }
+    case "down":
+      return { row: row + 1, col: col }
+    case "upleft":
+      return { row: isOddCol ? row : row - 1, col: col - 1 }
+    case "upright":
+      return { row: isOddCol ? row : row - 1, col: col + 1 }
+    case "downleft":
+      return { row: isOddCol ? row + 1 : row, col: col - 1 }
+    case "downright":
+      return { row: isOddCol ? row + 1 : row, col: col + 1 }
+    default:
+      return null
+  }
+}
+
+export function getNeighborCoords(row, col, boardState = null) {
+  const neighbors = DIRECTIONS.map((direction) => getNeighborCoord(row, col, direction)).filter(Boolean)
+
+  if (!boardState) {
+    return neighbors
+  }
+
+  return neighbors.filter(({ row: neighborRow, col: neighborCol }) =>
+    Object.prototype.hasOwnProperty.call(boardState, `${neighborRow},${neighborCol}`)
+  )
 }
 
 export function computeBuyableHexes(boardState, activePlayer) {
+  const normalizedPlayer = normalizeOwner(activePlayer)
   const next = {}
+  const ownedCells = []
 
   Object.values(boardState).forEach((cell) => {
+    const owner = normalizeOwner(cell.owner)
     const key = `${cell.row},${cell.col}`
-    next[key] = {
+    const nextCell = {
       ...cell,
-      isSelected: false,
+      owner,
+      isSpawnable: Boolean(owner),
       isOccupied: Boolean(cell.minion),
       isBuyable: false,
     }
+
+    next[key] = nextCell
+
+    if (owner === normalizedPlayer) {
+      ownedCells.push(nextCell)
+    }
   })
 
-  Object.values(next).forEach((cell) => {
-    if (cell.isSpawnable || cell.isOccupied) return
+  ownedCells.forEach((cell) => {
+    getNeighborCoords(cell.row, cell.col, next).forEach(({ row, col }) => {
+      const neighborKey = `${row},${col}`
+      const neighbor = next[neighborKey]
 
-    const hasSpawnableNeighbor = getNeighborCoords(cell.row, cell.col).some(({ row, col }) => {
-      const neighbor = next[`${row},${col}`]
-      return neighbor && neighbor.isSpawnable && neighbor.owner === activePlayer
-    })
+      if (!neighbor) return
+      if (neighbor.owner !== null) return
 
-    if (hasSpawnableNeighbor) {
-      next[`${cell.row},${cell.col}`] = {
-        ...cell,
+      next[neighborKey] = {
+        ...neighbor,
         isBuyable: true,
       }
-    }
+    })
   })
 
   return next

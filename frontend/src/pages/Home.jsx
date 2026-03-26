@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import { PageShell } from "../components/layout"
 import { ASSETS } from "../constants/assets"
 
-export default function Home({ onStart }) {
+export default function Home({ onStart, onRules }) {
   const particles = useMemo(() => {
     return Array.from({ length: 20 }, (_, i) => ({
       id: i,
@@ -57,7 +57,7 @@ export default function Home({ onStart }) {
           <div className="mt-2 flex w-full max-w-sm flex-col items-center gap-4">
             <button
               type="button"
-              onClick={() => onStart("DUEL")}
+              onClick={() => onStart?.()}
               className="
                 group relative mt-6 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600
                 px-10 py-4 text-white font-semibold tracking-wide
@@ -84,7 +84,7 @@ export default function Home({ onStart }) {
 
             <button
               type="button"
-              onClick={() => onStart("RULES")}
+              onClick={() => onRules?.()}
               className="
                 relative mt-2 rounded-lg border border-white/10
                 bg-white/10 px-6 py-2 text-white/80 backdrop-blur-md

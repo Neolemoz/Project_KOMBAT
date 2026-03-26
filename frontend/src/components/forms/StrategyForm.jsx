@@ -5,6 +5,8 @@ import { TextArea } from "../ui/TextArea"
 export default function StrategyForm({
   minion,
   value,
+  templates = [],
+  onApplyTemplate,
   onChange,
   onPrev,
   onNext,
@@ -80,10 +82,29 @@ export default function StrategyForm({
         id={`minion-strategy-${minion.id}`}
         value={safeValue.strategy}
         onChange={handleFieldChange("strategy")}
-        placeholder="Describe intended behavior"
+        placeholder={"Example:\nif (opponent) then move down else done"}
         rows={10}
         className="mt-6"
       />
+
+      {templates.length ? (
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Strategy Templates</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {templates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => onApplyTemplate?.(template)}
+                className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-left transition hover:border-cyan-300/25 hover:bg-slate-900/70"
+              >
+                <p className="text-sm font-semibold text-white">{template.name}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-300">{template.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
         <Button

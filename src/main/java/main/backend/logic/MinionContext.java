@@ -35,15 +35,22 @@ public class MinionContext {
         if (name.equals("col")) return minion.getCol();
         if (name.equals("Budget")) return owner.getBudgetLong();
 
-        // แก้ไข: เปลี่ยนเป็น "Int" (ตัว I ใหญ่) ให้ตรงกับ Spec และ Evaluator
         if (name.equals("Int")) {
-            return gameState.calculateInterest(owner.getBudgetLong());
+            double budget = owner.getBudget();
+            if (budget < 1) {
+                return 0L;
+            }
+
+            int turnCount = Math.max(1, gameState.getPlayerTurnCount(owner.getId()));
+            double rate = gameState.getInterestPct() * Math.log10(budget) * Math.log(turnCount);
+            if (Double.isNaN(rate) || Double.isInfinite(rate)) {
+                return 0L;
+            }
+            return (long) rate;
         }
 
-        // แก้ไข: เปลี่ยนเป็น "MaxBudget" (M, B ใหญ่) ให้ตรงกับ Spec
         if (name.equals("MaxBudget")) return gameState.getMaxBudget();
 
-        // เพิ่มตัวแปร "SpawnsLeft" ตาม Spec
         if (name.equals("SpawnsLeft")) return gameState.getRemainingSpawns(owner.getId());
 
         if (name.equals("random")) return (long) (Math.random() * 1000);

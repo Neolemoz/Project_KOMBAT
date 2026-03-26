@@ -113,7 +113,7 @@ export default function ChooseMinionPage({ minionType, onBack, onContinue }) {
                 <img
                   src={minion.imageUrl}
                   alt={minion.label}
-                  className="h-full w-full object-contain p-1"
+                  className="h-full w-full object-cover object-center scale-[1.08]"
                   draggable={false}
                 />
               </div>
