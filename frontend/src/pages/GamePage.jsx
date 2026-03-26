@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import BoardSVG from "../components/BoardSVG"
-import { getGameState, endTurn, buyHex, spawnMinion } from "../api/gameApi"
+import { getGameState, endTurn, buyHex, spawnMinion , buyMinionFromShop } from "../api/gameApi"
 
 function getSpawnZone(playerStr) {
     if (playerStr === "P1") return new Set(["1,1","1,2","1,3","2,1","2,2"])
@@ -56,6 +56,8 @@ function HeaderBar({ turnNumber, activePlayer }) {
         </div>
     )
 }
+
+
 
 function PlayerPanel({ player, active, budget, hp, inventory, onShop }) {
     const base = "relative rounded-2xl border bg-black/30 backdrop-blur p-4 md:p-5"
@@ -142,6 +144,7 @@ function PlayerPanel({ player, active, budget, hp, inventory, onShop }) {
     )
 }
 
+
 // === หน้าหลัก GamePage ===
 export default function GamePage({ onBack, minionConfigs = [] }) {
     const [gameState, setGameState] = useState(null)
@@ -196,6 +199,8 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
         return map
     }, [gameState])
 
+
+
     const activePlayerId  = gameState?.currentPlayerId ?? gameState?.activePlayerId ?? 1
     const activePlayerStr = activePlayerId === 1 ? "P1" : "P2"
     const spawnZone       = useMemo(() => getSpawnZone(activePlayerStr), [activePlayerStr])
@@ -228,9 +233,49 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
         else alert("Cannot buy this hex!")
     }
 
+    // กดปุ่ม Shop
+    const [minionTypes, setMinionTypes] = useState([]); // เก็บ type ของ Minion
+    const [isShopOpen, setIsShopOpen] = useState(false)
+    const [expandedStates, setExpandedStates] = useState({});
+    const handleShop = () => {
+        setIsShopOpen(true)
+    }
+    useEffect(() => {
+        console.log("Shop status:", isShopOpen);
+        console.log("Minion Configs from Setup:", minionConfigs);
+        if (isShopOpen) {
+            console.log("Shop is Open! Checking configs...", minionConfigs);
+            // ถ้ามี minionConfigs ส่งมาจาก Setup ให้เอาไปใส่ใน Shop
+            if (minionConfigs && minionConfigs.length > 0) {
+                setMinionTypes(minionConfigs);
+            }
+            // ถ้าใน gameState มีประเภทใหม่ๆ ก็ให้เอามาใส่ด้วย
+            else if (gameState?.minionTypes) {
+                setMinionTypes(gameState.minionTypes);
+            }
+        }
+    }, [isShopOpen, gameState,gameState]);
+
+    //Api
+    const handleBuyUnit = async (minion) => {
+        try {
+            // ยิง API ไปหักเงินและเพิ่มของเข้ากระเป๋า
+            await buyMinionFromShop(activePlayerId, minion.name);
+
+            // ถ้าสำเร็จ ให้โหลดข้อมูลกระดานและเงินใหม่
+            await refreshBoard();
+            alert(`Successfully purchased ${minion.name}!`);
+
+        } catch (error) {
+            // ระบบจะดึงข้อความ Error จาก client.js มาแสดง (เช่น "Not enough budget")
+            alert(error.message || "Failed to buy minion");
+        }
+    }
+
     if (!gameState) {
         return <div className="min-h-screen flex items-center justify-center text-white text-2xl font-bold bg-gray-900">Loading Battlefield...</div>
     }
+
 
     const p1 = gameState.players?.["1"]
     const p2 = gameState.players?.["2"]
@@ -286,10 +331,20 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
 
                 <div className="relative min-h-[760px] flex items-center justify-center mt-6">
                     <div className="absolute left-6 md:left-10 top-1/2 -translate-y-1/2 w-[340px] z-20">
-                        <PlayerPanel player="P1" active={activePlayerId === 1} budget={p1?.budget || 0} hp={p1?.aliveMinionCount || 0} inventory={minionConfigs} onShop={() => {}} />
+                        <PlayerPanel player="P1"
+                                     active={activePlayerId === 1}
+                                     budget={p1?.budget || 0}
+                                     hp={p1?.aliveMinionCount || 0}
+                                     inventory={minionConfigs}
+                                     onShop={handleShop} />
                     </div>
                     <div className="absolute right-6 md:right-10 top-1/2 -translate-y-1/2 w-[340px] z-20">
-                        <PlayerPanel player="P2" active={activePlayerId === 2} budget={p2?.budget || 0} hp={p2?.aliveMinionCount || 0} inventory={minionConfigs} onShop={() => {}} />
+                        <PlayerPanel player="P2"
+                                     active={activePlayerId === 2}
+                                     budget={p2?.budget || 0}
+                                     hp={p2?.aliveMinionCount || 0}
+                                     inventory={minionConfigs}
+                                     onShop={handleShop} />
                     </div>
 
                     <div className="flex items-center justify-center w-full">
@@ -322,6 +377,132 @@ export default function GamePage({ onBack, minionConfigs = [] }) {
                     </button>
                 </div>
             )}
+
+            {/* shop */}
+            {isShopOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+                    {/* กรอบสีน้ำเงิน */}
+                    <div className="bg-[#0b1024]
+                            rounded-[40px] p-10
+                            w-[85%]
+                            h-[85%]
+                            border border-[rgba(245,204,119,0.5)]
+                            shadow-[0_0_50px_rgba(245,204,119,0.2)]
+                            overflow-y-auto
+                            relative
+                            [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+
+                        <div className="flex justify-between items-start mb-10">
+                            {/* ปุ่มกลับ ซ้ายบน*/}
+                            <button
+                                onClick={() => setIsShopOpen(false)}
+                                className="rounded-md border border-white/30 bg-black/40
+                                px-4 py-2 text-sm font-semibold tracking-wide
+                                text-white transition hover:border-white/60 hover:bg-black/60"
+                            >
+                                <img
+                                    src="/back.png"
+                                    alt="Back"
+                                    className="h-10 w-auto md:h-12"
+                                    draggable="false"
+                                />
+                            </button>
+                            {/* แสดง budget ขวาบน*/}
+                            <div className="flex justify-between items-center mb-10">
+                                <div className="arcane-pill arcane-pill--gold px-8 py-3">
+                                    <span className="text-2xl font-bold text-amber-300">
+                    💰                   {activePlayerId === 1 ? Math.floor(p1?.budget || 0) : Math.floor(p2?.budget || 0)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ส่วนแสดง minion */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-4 items-start">
+                            {/* เช็คว่ามีข้อมูล minion ไหม */}
+                            {minionTypes.length > 0 ? (
+                                minionTypes.map((minion, index) => (
+                                    <div key={index} className="group">
+                                        <div className="bg-[#141a3a] rounded-[30px] p-6 flex flex-col items-center border border-white/5 ">
+                                            {/* รูป */}
+                                            <div className="relative w-45 h-52 shrink-0 aspect-[4/5]
+                                            rounded-[24px] bg-[#f3f4f7]  flex items-center justify-center overflow-hidden">
+
+                                                <div className="absolute inset-0 bg-gradient-to-b justify-center
+                                                from-amber-200/10 to-transparent rounded-2xl -z-10" />
+                                                <img
+                                                    src={minion.imageUrl || "/minion-robot.png"}
+                                                    alt={minion.name}
+                                                    className="w-[85%] h-[85%] object-contain
+                                                    rounded-[40px] relative z-10
+                                                    drop-shadow-[0_10px_15px_rgba(0,0,0,0.2)]
+                                                    "
+                                                />
+
+                                            </div>
+                                            {/* ชื่อ */}
+                                            <h3 className="arcane-header-text text-3xl  font-cinzel my-5">
+                                                {minion.name || "Minion"}
+                                            </h3>
+                                            {/* Status */}
+                                            <div className="flex gap-4 mt-2 text-md text-white/60">
+                                                <span>HP: <span className="text-red-400 font-bold">100{minion.hp}</span></span>
+                                                <span>DEF: <span className="text-blue-400 font-bold">{minion.defense}</span></span>
+                                            </div>
+                                            {/* strategy */}
+                                            <button
+                                                onClick={() => setExpandedStates(prev => ({ ...prev, [index]: !prev[index] }))}
+                                                className="w-full flex justify-center items-center mb-2
+                                                transition-colors"
+                                            >
+                                                <span className="text-amber-200 font-bold uppercase text-xm tracking-widest">
+                                                    Minion Strategy
+                                                </span>
+                                                <span className="text-amber-200 text-lg">
+                                                    {expandedStates[index] ? '−' : '+'}
+                                                </span>
+                                            </button>
+
+                                            {/* แสดง Strategy */}
+                                            <div className={`transition-all duration-300 ease-in-out bg-black/40 rounded-[15px] mb-4 
+                                            [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
+                                            ${expandedStates[index]
+                                                    ? 'h-60 w-full p-3 opacity-100 overflow-y-auto'
+                                                    : 'h-0 w-full opacity-0 overflow-hidden'
+                                            }`}>
+                                                <p className="text-[11px] text-amber-100/70 font-mono leading-relaxed
+                                                whitespace-pre-wrap break-words
+                                                ">
+                                                    {/* ดึงข้อมูล strategy จาก Setup มาแสดง */}
+                                                    {minion.strategy || minion.script || "// No strategy defined"}
+                                                </p>
+                                            </div>
+
+                                            {/* price & buy */}
+                                            <button
+                                                onClick={() => handleBuyUnit(minion)}
+                                                className="flex items-center gap-2 my-2 bg-amber-50 px-4 py-1
+                                                rounded-full border border-amber-100 mt-auto">
+                                                {/*<img src="/coin.png" alt="coin" className="w-7 h-7" />*/}
+                                                <span className="text-amber-700 font-bold text-lg tabular-nums">
+                                                    ${minion.cost || 200}
+                                                </span>
+                                            </button>
+
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                /* ไม่มีให้แสดง */
+                                <div className="col-span-full text-center py-20">
+                                    <p className="text-white/40 italic">No minions found. Please define them in Setup.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     )
 }
