@@ -10,10 +10,12 @@ public class BinaryOpNode implements ExpressionNode {
         this.right = right;
     }
 
-    // เพิ่ม 3 Methods นี้
-    public ExpressionNode getLeft() { return left; }
-    public ExpressionNode getRight() { return right; }
-    public String getOperator() { return operator; }
+    public ExpressionNode getLeft() {
+        return left; }
+    public ExpressionNode getRight() {
+        return right; }
+    public String getOperator() {
+        return operator; }
 
     @Override
     public long evaluate(MinionContext ctx) {
@@ -28,5 +30,23 @@ public class BinaryOpNode implements ExpressionNode {
             case "^": return (long) Math.pow(l, r); // เพิ่มเผื่อไว้ในกรณีเรียก evaluate โดยตรง
             default: return 0;
         }
+    }
+    private long powLong(long base, long exponent) {
+        if (exponent < 0) {
+            return 0;
+        }
+        long result = 1;
+        long factor = base;
+        long power = exponent;
+        while (power > 0) {
+            if ((power & 1L) == 1L) {
+                result *= factor;
+            }
+            power >>>= 1;
+            if (power > 0) {
+                result *= factor;
+            }
+        }
+        return result;
     }
 }

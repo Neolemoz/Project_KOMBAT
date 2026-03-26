@@ -1,260 +1,132 @@
-import { useMemo, useState, useEffect } from "react"
-import { hexPointsPointyTop, hexToPixelPointyTop } from "../utils/hexMath"
+import React from "react"
 
 export default function BoardSVG({
                                      rows = 8,
                                      cols = 8,
+                                     size = 42,
+                                     padding = 40,
                                      selected,
                                      spawnZone,
                                      activePlayer,
                                      boardState,
                                      purchasableHexes,
                                      onHexClick,
-                                     size = 55,
-                                     padding = 60,
                                      className = "",
                                  }) {
+    const hexWidth = size * 2
+    const hexHeight = Math.sqrt(3) * size
+    const horizontalSpacing = hexWidth * 0.75
+    const verticalSpacing = hexHeight
+    const boardWidth = padding * 2 + (cols - 1) * horizontalSpacing + hexWidth
+    const boardHeight = padding * 2 + (rows - 1) * verticalSpacing + hexHeight + (hexHeight / 2)
 
-    const spawnFill = activePlayer === 1
-        ? "rgba(251,113,133,0.4)"
-        : "rgba(125,211,252,0.4)"
+    const getHexPoints = (cx, cy) => {
+        const points = []
+        for (let i = 0; i < 6; i++) {
+            const angle_deg = 60 * i
+            const angle_rad = (Math.PI / 180) * angle_deg
+            points.push(`${cx + size * Math.cos(angle_rad)},${cy + size * Math.sin(angle_rad)}`)
+        }
+        return points.join(" ")
+    }
 
-    const [hover, setHover] = useState(null)
+    const renderP1Minion = (cx, cy, hp) => (
+        <g className="pointer-events-none drop-shadow-md">
+            <circle cx={cx - 10} cy={cy - 12} r={6} fill="#0284C7" />
+            <line x1={cx - 10} y1={cy - 6} x2={cx - 10} y2={cy + 8} stroke="#0284C7" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy - 2} x2={cx} y2={cy - 6} stroke="#0284C7" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy - 2} x2={cx - 20} y2={cy + 4} stroke="#0284C7" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy + 8} x2={cx - 18} y2={cy + 20} stroke="#0284C7" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy + 8} x2={cx - 2} y2={cy + 20} stroke="#0284C7" strokeWidth="4" strokeLinecap="round" />
+            <circle cx={cx + 6} cy={cy + 2} r={14} fill="#22D3EE" stroke="#083344" strokeWidth="2" />
+            <text x={cx + 6} y={cy + 7} textAnchor="middle" fill="#083344" fontSize="14" fontWeight="bold">{hp}</text>
+        </g>
+    )
 
-    const [blink,setBlink] = useState(true)
+    const renderP2Minion = (cx, cy, hp) => (
+        <g className="pointer-events-none drop-shadow-md">
+            <circle cx={cx - 10} cy={cy - 12} r={6} fill="#C2410C" />
+            <path d={`M ${cx - 16} ${cy - 15} Q ${cx - 12} ${cy - 22} ${cx - 10} ${cy - 18}`} fill="none" stroke="#C2410C" strokeWidth="2.5" strokeLinecap="round" />
+            <path d={`M ${cx - 4} ${cy - 15} Q ${cx - 8} ${cy - 22} ${cx - 10} ${cy - 18}`} fill="none" stroke="#C2410C" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy - 6} x2={cx - 10} y2={cy + 8} stroke="#C2410C" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy - 2} x2={cx} y2={cy - 6} stroke="#C2410C" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy - 2} x2={cx - 20} y2={cy + 4} stroke="#C2410C" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy + 8} x2={cx - 18} y2={cy + 20} stroke="#C2410C" strokeWidth="4" strokeLinecap="round" />
+            <line x1={cx - 10} y1={cy + 8} x2={cx - 2} y2={cy + 20} stroke="#C2410C" strokeWidth="4" strokeLinecap="round" />
+            <path d={`M ${cx - 4} ${cy - 10} L ${cx + 16} ${cy - 10} L ${cx + 16} ${cy + 4} Q ${cx + 6} ${cy + 20} ${cx - 4} ${cy + 4} Z`} fill="#EA580C" stroke="#431407" strokeWidth="2" />
+            <text x={cx + 6} y={cy + 5} textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="bold">{hp}</text>
+        </g>
+    )
 
-    useEffect(()=>{
+    const hexes = []
 
-        const id = setInterval(()=>{
-            setBlink(v=>!v)
-        },700)
+    for (let r = 1; r <= rows; r++) {
+        for (let c = 1; c <= cols; c++) {
+            const key = `${r},${c}`
 
-        return ()=>clearInterval(id)
+            const yOffset = (c % 2 !== 0) ? hexHeight / 2 : 0
+            const cx = padding + hexWidth / 2 + (c - 1) * horizontalSpacing
+            const cy = padding + hexHeight / 2 + (r - 1) * verticalSpacing + yOffset
 
-    },[])
+            const cellData = boardState?.get(key)
+            const isSelected = selected?.row === r && selected?.col === c
+            const isSpawnable = spawnZone?.has(key)
+            const isPurchasable = purchasableHexes?.has(key)
 
-    const hexes = useMemo(()=>{
+            let fill = "#CBD5E1"
+            let stroke = "#94A3B8"
+            let textColor = "#64748B"
 
-        const items=[]
-
-        for(let r=1;r<=rows;r++){
-            for(let c=1;c<=cols;c++){
-
-                const {x,y}=hexToPixelPointyTop(r,c,size)
-
-                items.push({
-                    row:r,
-                    col:c,
-                    x:x+padding,
-                    y:y+padding
-                })
+            if (cellData?.owner === 1) {
+                fill = "#22D3EE"
+                stroke = "#0891B2"
+                textColor = "#083344"
+            } else if (cellData?.owner === 2) {
+                fill = "#EA580C"
+                stroke = "#9A3412"
+                textColor = "#431407"
+            } else if (isPurchasable) {
+                fill = "#FDE047"
+                stroke = "#CA8A04"
             }
+
+            let filter = ""
+            let strokeWidth = 2
+            if (isSelected) {
+                filter = "brightness(1.2)"
+                stroke = "#FFFFFF"
+                strokeWidth = 3
+            } else if (isSpawnable && !cellData?.hasMinion) {
+                stroke = activePlayer === 1 ? "#67E8F9" : "#FCA5A5"
+                strokeWidth = 3
+            }
+
+            hexes.push(
+                <g
+                    key={key}
+                    onClick={() => onHexClick?.(r, c)}
+                    className="cursor-pointer transition-all duration-200 hover:brightness-110"
+                    style={{ filter }}
+                >
+                    <polygon points={getHexPoints(cx, cy)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+
+                    {cellData?.hasMinion ? (
+                        cellData.occupantOwner === 1
+                            ? renderP1Minion(cx, cy, cellData.hp)
+                            : renderP2Minion(cx, cy, cellData.hp)
+                    ) : (
+                        <text x={cx} y={cy + 5} textAnchor="middle" fill={textColor} fontSize="14" fontWeight="bold" className="pointer-events-none opacity-80">
+                            {r},{c}
+                        </text>
+                    )}
+                </g>
+            )
         }
+    }
 
-        return items
-
-    },[rows,cols,size,padding])
-
-    const bounds = useMemo(()=>{
-
-        if(hexes.length===0)
-            return {w:0,h:0,minX:0,minY:0}
-
-        let minX=Infinity
-        let maxX=-Infinity
-        let minY=Infinity
-        let maxY=-Infinity
-
-        for(const h of hexes){
-
-            minX=Math.min(minX,h.x-size)
-            maxX=Math.max(maxX,h.x+size)
-
-            minY=Math.min(minY,h.y-size)
-            maxY=Math.max(maxY,h.y+size)
-        }
-
-        const margin=20
-
-        return {
-            w:(maxX-minX)+margin*2,
-            h:(maxY-minY)+margin*2,
-            minX:minX-margin,
-            minY:minY-margin
-        }
-
-    },[hexes,size])
-
-    return(
-
-        <div className={`relative ${className} flex items-center justify-center`}>
-
-            <svg
-                width="100%"
-                height="100%"
-                viewBox={`${bounds.minX} ${bounds.minY} ${bounds.w} ${bounds.h}`}
-                preserveAspectRatio="xMidYMid meet"
-                className="select-none max-h-[85vh]"
-            >
-
-                {hexes.map(h=>{
-
-                    const key=`${h.row},${h.col}`
-
-                    const isSpawn=spawnZone?.has(key)
-
-                    const isSelected=
-                        selected?.row===h.row &&
-                        selected?.col===h.col
-
-                    const isHovered=
-                        hover?.row===h.row &&
-                        hover?.col===h.col
-
-                    const isPurchasable=
-                        purchasableHexes?.has(key)
-
-                    const hexData=
-                        boardState?.get(key)||{}
-
-                    const owner=Number(hexData.owner)
-                    const hasMinion=hexData.hasMinion
-
-                    let fill="rgba(20,25,35,0.7)"
-
-                    if(owner===1)
-                        fill="rgba(244,63,94,0.5)"
-
-                    if(owner===2)
-                        fill="rgba(14,165,233,0.5)"
-
-                    if(isSpawn && !owner)
-                        fill=spawnFill
-
-                    if(isPurchasable && !owner){
-
-                        fill=blink
-                            ? "rgba(251,191,36,0.55)"
-                            : "rgba(251,191,36,0.15)"
-                    }
-
-                    let stroke="rgba(100,116,139,0.5)"
-                    let strokeWidth=1
-
-                    if(isPurchasable && !owner){
-
-                        stroke=blink
-                            ? "rgba(251,191,36,0.9)"
-                            : "rgba(251,191,36,0.3)"
-
-                        strokeWidth=2
-                    }
-
-                    if(isHovered){
-                        stroke="rgba(255,255,255,0.8)"
-                        strokeWidth=2
-                    }
-
-                    if(isSelected){
-                        stroke="rgba(255,215,0,1)"
-                        strokeWidth=3
-                    }
-
-                    const pts=hexPointsPointyTop(h.x,h.y,size)
-
-                    return(
-
-                        <g key={key}>
-
-                            <polygon
-                                points={pts}
-                                fill={fill}
-                                stroke={stroke}
-                                strokeWidth={strokeWidth}
-                                style={{cursor:"pointer"}}
-                                onMouseEnter={()=>setHover({row:h.row,col:h.col})}
-                                onMouseLeave={()=>setHover(null)}
-                                onClick={()=>onHexClick?.(h.row,h.col)}
-                            />
-
-                            <text
-                                x={h.x}
-                                y={h.y-size*0.4}
-                                textAnchor="middle"
-                                fontSize="10"
-                                fill="rgba(255,255,255,0.3)"
-                                style={{pointerEvents:"none"}}
-                            >
-                                {h.row},{h.col}
-                            </text>
-
-                            {isPurchasable && !owner &&(
-
-                                <text
-                                    x={h.x}
-                                    y={h.y+5}
-                                    textAnchor="middle"
-                                    fontSize="14"
-                                >
-                                    💰
-                                </text>
-                            )}
-
-                            {hasMinion &&(
-
-                                <g>
-
-                                    <circle
-                                        cx={h.x}
-                                        cy={h.y+2}
-                                        r={size*0.40}
-                                        fill={owner===1 ? "#f43f5e":"#0ea5e9"}
-                                        stroke="#fff"
-                                        strokeWidth="2"
-                                    />
-
-                                    <text
-                                        x={h.x}
-                                        y={h.y+6}
-                                        textAnchor="middle"
-                                        fontSize="12"
-                                        fill="#fff"
-                                        fontWeight="bold"
-                                    >
-                                        M
-                                    </text>
-
-                                    <rect
-                                        x={h.x-14}
-                                        y={h.y+size*0.40+4}
-                                        width="28"
-                                        height="12"
-                                        fill="rgba(0,0,0,0.7)"
-                                        rx="4"
-                                    />
-
-                                    <text
-                                        x={h.x}
-                                        y={h.y+size*0.40+13}
-                                        textAnchor="middle"
-                                        fontSize="9"
-                                        fill="#4ade80"
-                                        fontWeight="bold"
-                                    >
-                                        {hexData.hp}
-                                    </text>
-
-                                </g>
-                            )}
-
-                        </g>
-                    )
-
-                })}
-
-            </svg>
-
-        </div>
-
+    return (
+        <svg viewBox={`0 0 ${boardWidth} ${boardHeight}`} className={className}>
+            {hexes}
+        </svg>
     )
 }

@@ -13,7 +13,7 @@ public class Kombat {
     static final int    INIT_HP      = 100;
     static final long   TURN_BUDGET  = 100;
     static final double INTEREST     = 5.0;
-    static final int    MAX_TURNS    = 200;
+    static final int    MAX_TURNS    = 50;
 
     // ──────────────────────────────────────────────────
     // MODEL

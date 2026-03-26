@@ -11,7 +11,13 @@ public class ActionCommandNode implements Node {
         this.expression = expression;
     }
 
-    public String getActionType() { return actionType; }
-    public String getDirection() { return direction; }
-    public ExpressionNode getExpression() { return expression; }
+    public String getActionType() {
+        return actionType;
+    }
+    public String getDirection() {
+        return direction;
+    }
+    public ExpressionNode getExpression() {
+        return expression;
+    }
 }

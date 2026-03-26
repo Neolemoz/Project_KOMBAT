@@ -30,7 +30,7 @@ public class ConfigLoader {
             e.printStackTrace();
             // ควรกำหนดค่า Default กันตายไว้ถ้าโหลดไฟล์ไม่ได้
             config.put("init_budget", 10000L);
-            config.put("max_turns", 100L);
+            config.put("max_turns", 40L);
             config.put("max_spawns", 10L);
             config.put("spawn_cost", 100L);
             config.put("init_hp", 1000L);
