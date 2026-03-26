@@ -5,14 +5,14 @@ function MinionCard({ minion, disabled, onSelect, priceLabel }) {
       disabled={disabled}
       onClick={() => onSelect?.(minion)}
       className={[
-        "group rounded-[26px] border p-4 text-left transition",
+        "group rounded-[28px] border p-4 text-left transition",
         "border-white/8 bg-[#141a3a]/92 shadow-[0_18px_50px_rgba(0,0,0,0.28)]",
         "hover:border-amber-200/35 hover:bg-[#1a2146] disabled:cursor-not-allowed disabled:opacity-40",
       ].join(" ")}
     >
-      <div className="relative overflow-hidden rounded-[20px] bg-[#f3f4f7]">
+      <div className="relative overflow-hidden rounded-[22px] bg-[#f3f4f7] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
         <div className="absolute inset-0 bg-gradient-to-b from-amber-200/10 to-transparent" />
-        <div className="aspect-[4/5] w-full max-h-[280px] overflow-hidden">
+        <div className="aspect-[4/5] w-full max-h-[250px] overflow-hidden">
           <img
             src={minion.imageUrl || "/minion-robot.png"}
             alt={minion.name}
@@ -42,7 +42,7 @@ function MinionCard({ minion, disabled, onSelect, priceLabel }) {
 
       <div className="mt-4 rounded-[18px] border border-white/8 bg-slate-950/40 p-3">
         <p className="text-xs uppercase tracking-[0.26em] text-slate-400">Strategy</p>
-        <div className="mt-2 max-h-44 overflow-y-auto pr-1">
+        <div className="mt-2 max-h-40 overflow-y-auto pr-1">
           <p className="whitespace-pre-wrap break-words text-xs leading-6 text-slate-200">
             {minion.strategy || "No strategy"}
           </p>
@@ -64,8 +64,24 @@ export default function SpawnModal({
   if (!open || !selectedHex) return null
 
   return (
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-black/78 p-4 backdrop-blur-md">
-      <div className="mx-auto flex min-h-[92vh] w-[96vw] max-w-[1680px] flex-col rounded-[34px] border border-amber-200/20 bg-[#0b1024]/95 p-5 shadow-[0_0_50px_rgba(245,204,119,0.12)]">
+    <div className="fixed inset-0 z-[120] overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.10),transparent_28%),radial-gradient(circle_at_85%_18%,rgba(250,204,21,0.14),transparent_24%),linear-gradient(180deg,rgba(3,7,19,0.44),rgba(2,6,23,0.76))] p-2 backdrop-blur-2xl md:p-3">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.02),transparent_52%)]" />
+        <div className="absolute left-[5%] top-[8%] h-80 w-80 rounded-full bg-cyan-300/10 blur-[130px]" />
+        <div className="absolute right-[7%] top-[12%] h-96 w-96 rounded-full bg-amber-200/12 blur-[150px]" />
+        <div className="absolute bottom-[4%] left-[18%] h-[28rem] w-[28rem] rounded-full bg-indigo-400/12 blur-[170px]" />
+        <div className="absolute bottom-[10%] right-[18%] h-72 w-72 rounded-full bg-violet-300/8 blur-[135px]" />
+      </div>
+
+      <div className="relative mx-auto flex min-h-[calc(100vh-16px)] w-[min(1920px,calc(100vw-16px))] flex-col overflow-hidden rounded-[42px] border border-amber-200/25 bg-[linear-gradient(180deg,rgba(10,16,40,0.96),rgba(8,12,30,0.94))] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_90px_rgba(2,6,23,0.75),0_0_50px_rgba(250,204,21,0.10)]">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/40 to-transparent" />
+          <div className="absolute inset-x-10 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(255,233,160,0.12),transparent_60%)]" />
+          <div className="absolute left-[-6rem] top-[18%] h-72 w-72 rounded-full border border-cyan-200/8 bg-cyan-300/5 blur-3xl" />
+          <div className="absolute right-[-8rem] bottom-[12%] h-80 w-80 rounded-full border border-amber-200/8 bg-amber-200/5 blur-3xl" />
+        </div>
+
+        <div className="relative z-10 flex min-h-[calc(100vh-16px)] flex-col p-6 md:p-8">
         <div className="mb-5 flex shrink-0 items-start justify-between gap-4">
           <div className="max-w-4xl">
             <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">Choose Minion Type</p>
@@ -104,7 +120,7 @@ export default function SpawnModal({
           </div>
         </div>
 
-        <div className="pr-1">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-2">
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {minionTypes.map((minion) => (
               <MinionCard
@@ -116,6 +132,7 @@ export default function SpawnModal({
               />
             ))}
           </div>
+        </div>
         </div>
       </div>
     </div>
