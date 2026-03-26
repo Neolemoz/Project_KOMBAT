@@ -9,7 +9,7 @@ export default function MinionSidebar({
   if (!minions || minions.length === 0) return null
 
   return (
-    <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1">
+    <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1 ">
       {minions.map((minion) => {
         const isActive = minion.id === activeId
         const isComplete = Boolean(completionById[minion.id])

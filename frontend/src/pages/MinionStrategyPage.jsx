@@ -271,7 +271,7 @@ export default function MinionStrategyPage({
 
   return (
     <PageShell bg={ASSETS.strategyBg} innerClassName="overflow-x-hidden">
-      <div className="flex flex-1 flex-col items-center overflow-hidden">
+      <div className="flex flex-1 flex-col items-center overflow-hidden ">
         <div className="w-full shrink-0">
           <PageTopBar
             back={<BackButton onClick={onBack} />}
