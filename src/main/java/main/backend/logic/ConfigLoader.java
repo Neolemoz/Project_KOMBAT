@@ -7,16 +7,14 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
-@Component // <--- ต้องใส่ตรงนี้ เพื่อให้ Spring สร้าง ConfigLoader ให้ GameService
+@Component
 public class ConfigLoader {
     private Map<String, Long> config = new HashMap<>();
 
-    public ConfigLoader() { // Default constructor ที่ Spring จะเรียกใช้
-        // โหลดไฟล์ config.txt (อาจต้องระบุ Path ให้ถูกถ้าหาไม่เจอ)
+    public ConfigLoader() { // Default constructor
         load("config.txt");
     }
 
-    // ... (ส่วน load และ get คงเดิม) ...
     public void load(String filename) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             String line;
@@ -30,7 +28,7 @@ public class ConfigLoader {
             e.printStackTrace();
             // ควรกำหนดค่า Default กันตายไว้ถ้าโหลดไฟล์ไม่ได้
             config.put("init_budget", 10000L);
-            config.put("max_turns", 100L);
+            config.put("max_turns", 40L);
             config.put("max_spawns", 10L);
             config.put("spawn_cost", 100L);
             config.put("init_hp", 1000L);

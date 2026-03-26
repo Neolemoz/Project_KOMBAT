@@ -1,18 +1,18 @@
-t = t + 1
-m = 0
-while (3 - m) {
-  if (Budget - 100) then {} else done
+t = t + 1  # keeping track of the turn number
+m = 0  # number of random moves this turn
+while (3 - m) {  # made less than 3 random moves
+  if (Budget - 100) then {} else done  # too poor to do anything else
   opponentLoc = opponent
- if (opponentLoc / 10 - 1)
-   then
-     if (opponentLoc % 10 - 5) then move upleft
-     else if (opponentLoc % 10 - 4) then move downleft
-     else if (opponentLoc % 10 - 3) then move down
-     else if (opponentLoc % 10 - 2) then move downright
-     else if (opponentLoc % 10 - 1) then move upright
-     else move up
+  if (opponentLoc / 10 - 1)
+  then  # opponent afar
+    if (opponentLoc % 10 - 5) then move downleft
+    else if (opponentLoc % 10 - 4) then move down
+    else if (opponentLoc % 10 - 3) then move downright
+    else if (opponentLoc % 10 - 2) then move right
+    else if (opponentLoc % 10 - 1) then move upright
+    else move up
   else if (opponentLoc)
-  then
+  then  # opponent adjacent to this minion
     if (opponentLoc % 10 - 5) then {
       cost = 10 ^ (nearby upleft % 100 + 1)
       if (Budget - cost) then shoot upleft cost else {}
@@ -37,9 +37,9 @@ while (3 - m) {
       cost = 10 ^ (nearby up % 100 + 1)
       if (Budget - cost) then shoot up cost else {}
     }
-  else {
-    try = 0
-    while (3 - try) {
+  else {  # no visible opponent; move in a random direction
+    try = 0  # keep track of number of attempts
+    while (3 - try) {  # no more than 3 attempts
       success = 1
       dir = random % 6
       # (nearby <dir> % 10 + 1) ^ 2 is positive if adjacent cell in <dir> has no ally
@@ -48,10 +48,10 @@ while (3 - m) {
       else if ((dir - 2) * (nearby down % 10 + 1) ^ 2) then move down
       else if ((dir - 1) * (nearby downright % 10 + 1) ^ 2) then move downright
       else if (dir * (nearby upright % 10 + 1) ^ 2) then move upright
-      else if ((nearby up % 10 + 1) ^ 2) then move up
+      else if ((nearby up % 10 + 1) ^ 2) move up
       else success = 0
       if (success) then try = 3 else try = try + 1
     }
     m = m + 1
   }
-}
+}  # end while

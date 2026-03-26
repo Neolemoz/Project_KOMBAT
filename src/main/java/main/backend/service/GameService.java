@@ -1,38 +1,26 @@
 package main.backend.service;
 
 import main.backend.logic.*;
-import main.backend.model.GameState;
-import main.backend.model.Minion;
-import main.backend.model.MinionType;
-import main.backend.model.Player;
+import main.backend.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class GameService {
-    private GameState gameState;
-    private ConfigLoader config;
-
-    // เก็บสถานะว่าตาใคร (1 หรือ 2)
-    private int currentPlayerId = 1;
-
-    // โหมดการเล่น: "duel", "solitaire", "auto"
-    private String gameMode = "duel";
-
-    public void setGameMode(String mode) {
-        this.gameMode = mode;
-    }
-    public String getGameMode() {
-        return gameMode;
-    }
-
-    private Map<String, MinionType> definedMinionTypes = new HashMap<>();
     private static final int MAX_MINION_TYPES = 5;
+    private static final int MAX_STRATEGY_LOOPS = 10_000;
+    private static final int MAX_GAME_TURNS = 50;
+    private static final Set<String> SPECIAL_VARS = Set.of("row", "col", "Budget", "Int", "MaxBudget", "random", "ally", "opponent", "nearby", "SpawnsLeft");
+
+    private GameState gameState;
+    private final ConfigLoader config;
+    private int currentPlayerId = 1;
+    private String gameMode = "duel";
+    private final Map<String, MinionType> definedMinionTypes = new HashMap<>();
+    private final Set<String> appliedTurnEconomyKeys = new HashSet<>();
 
     @Autowired
     public GameService(ConfigLoader config) {
@@ -40,254 +28,302 @@ public class GameService {
         init();
     }
 
-    public void init() {
-        // --- แก้ไขจุดที่ Error: ส่งค่าให้ครบ 7 ตัว ตาม Constructor ใหม่ของ GameState ---
-        this.gameState = new GameState(
-                config.get("init_budget"),
-                (int) config.get("max_turns"),
-                (int) config.get("max_spawns"),
-                config.get("spawn_cost"),
-                config.get("init_hp"),
-                config.get("max_budget"),            // Argument ที่ 6: Max Budget
-                (double) config.get("interest_pct")  // Argument ที่ 7: Interest % (ต้องแปลงเป็น double)
-        );
-        this.definedMinionTypes.clear();
+    public void setGameMode(String mode) { this.gameMode = mode; }
+    public String getGameMode() { return gameMode; }
+    public int getCurrentPlayerId() { return currentPlayerId; }
+    public GameState getGameState() { refreshGameStatus(); return gameState; }
 
-        // เริ่มเกมที่ Player 1 และคิดเงินเทิร์นแรกทันที
+    public void init() {
+        this.gameState = new GameState(config.get("init_budget"), MAX_GAME_TURNS, (int) config.get("max_spawns"), config.get("spawn_cost"), config.get("init_hp"), config.get("max_budget"), (double) config.get("interest_pct"));
+        this.definedMinionTypes.clear();
+        this.appliedTurnEconomyKeys.clear();
         this.currentPlayerId = 1;
         this.gameState.setActivePlayerId(1);
+        this.gameState.setGameOver(false);
+        this.gameState.setWinner(0);
 
-        startTurn(this.currentPlayerId);
+        for (int i = 1; i <= 2; i++) {
+            this.gameState.setInterestForPlayer(i, 0.0);
+            this.gameState.setPlayerTurnCount(i, 0);
+            this.gameState.resetStrategyCostForPlayer(i);
+            this.gameState.setBoughtHexThisTurn(i, false);
+            this.gameState.setSpawnedThisTurn(i, false);
+        }
+        applyTurnEconomy();
+        refreshGameStatus();
     }
 
-    // --- Logic เริ่มเทิร์น: คิดเงินและดอกเบี้ย ---
-    private void startTurn(int playerId) {
-        Player p = gameState.getPlayer(playerId);
+    public void applyTurnEconomy() {
+        if (gameState.isGameOver()) return;
+        String economyKey = gameState.getTurnCount() + ":" + currentPlayerId;
+        if (!appliedTurnEconomyKeys.add(economyKey)) return;
 
-        // ดึงค่า Budget เป็น double เพื่อความแม่นยำในการคำนวณ
-        double currentBudget = p.getBudget();
-        int t = gameState.getTurnCount();
+        Player player = gameState.getPlayer(currentPlayerId);
+        int turnNum = Math.max(1, gameState.getPlayerTurnCount(currentPlayerId) + 1);
+        double newBudget = player.getBudget() + config.get("turn_budget");
+        double interest = gameState.calculateInterest(newBudget, turnNum);
 
-        // Spec: b คือ base interest rate percentage
-        double b = (double) config.get("interest_pct");
-        double r = 0;
-
-        // Spec: ถ้างบประมาณน้อยกว่า 1 จะไม่ได้รับดอกเบี้ย
-        if (currentBudget >= 1 && t > 0) {
-            // สูตร: r = b * log10(m) * ln(t)
-            r = b * Math.log10(currentBudget) * Math.log(t);
-        }
-
-        // Spec: interest = m * r / 100 (ใช้ floating-point arithmetic)
-        double interest = (currentBudget * r) / 100.0;
-
-        // คำนวณรายได้ทั้งหมดโดยยังคงเก็บทศนิยมไว้สะสม
-        double income = config.get("turn_budget") + interest;
-
-        // เพิ่มเงินให้ผู้เล่น (Player.java ของคุณรองรับ double อยู่แล้ว)
-        p.addBudget(income);
-
-        // ตรวจสอบ Max Budget
-        long maxB = config.get("max_budget");
-        if (p.getBudget() > maxB) {
-            p.setBudget(maxB); // ถ้าเกินก็ตัดยอดกลับลงมาให้เท่าลิมิต
-        }
+        player.setBudget(Math.min(newBudget + interest, config.get("max_budget")));
+        gameState.setInterestForPlayer(currentPlayerId, interest);
+        gameState.setPlayerTurnCount(currentPlayerId, turnNum);
     }
 
     public boolean defineMinionType(String name, int hp, int defense, String script) {
-        if (definedMinionTypes.size() >= MAX_MINION_TYPES) return false;
-        if (definedMinionTypes.containsKey(name)) return false;
-
+        if (definedMinionTypes.size() >= MAX_MINION_TYPES || definedMinionTypes.containsKey(name)) return false;
         try {
-            List<String> tokens = new Tokenizer(script).tokenize();
-            Node ast = new Parser(tokens).parse();
-
-            MinionType type = new MinionType(name, hp, defense, ast);
-            definedMinionTypes.put(name, type);
+            definedMinionTypes.put(name, new MinionType(name, hp, defense, new Parser(new Tokenizer(script).tokenize()).parse()));
             return true;
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception e) { return false; }
+    }
+
+    public void clearDefinedMinionTypes() { definedMinionTypes.clear(); }
+
+    public boolean spawnMinion(int pId, int row, int col, String typeName) {
+        MinionType type = definedMinionTypes.get(typeName);
+        return type != null && spawnMinion(pId, row, col, type.getDefense(), typeName, type.getStrategyAST(), type.getMaxHp());
+    }
+
+    public boolean spawnMinion(int pId, int row, int col, long def, String script) {
+        return spawnMinion(pId, row, col, def, script, "Minion");
+    }
+
+    public boolean spawnMinion(int pId, int row, int col, long def, String script, String name) {
+        try {
+            return spawnMinion(pId, row, col, def, name, new Parser(new Tokenizer(script).tokenize()).parse(), config.get("init_hp"));
+        } catch (Exception e) { return false; }
+    }
+
+    private boolean spawnMinion(int pId, int row, int col, long def, String name, Node ast, long hp) {
+        if (gameState.isGameOver() || pId != currentPlayerId || gameState.hasSpawnedThisTurn(pId)) return false;
+        Player p = gameState.getPlayer(pId);
+        if (!gameState.canSpawn(p, row, col)) return false;
+
+        long cost = (gameState.getTurnCount() == 1 && p.getMinions().isEmpty()) ? 0 : config.get("spawn_cost");
+        if (!p.spend(cost)) return false;
+
+        Minion m = new Minion(p, def, hp, ast);
+        if (name != null && !name.isBlank()) m.setName(name);
+        gameState.placeMinion(p, m, row, col);
+        gameState.setSpawnedThisTurn(pId, true);
+        log(pId, "spawn", m.getName(), m.getName() + " spawned at (" + row + "," + col + ").", null, null, row, col, null, null);
+        refreshGameStatus();
+        return true;
+    }
+
+    public boolean buyHex(int pId, int row, int col) {
+        if (gameState.isGameOver() || pId != currentPlayerId || gameState.hasBoughtHexThisTurn(pId)) return false;
+        if (gameState.buyHex(gameState.getPlayer(pId), row, col, config.get("hex_purchase_cost"))) {
+            gameState.setBoughtHexThisTurn(pId, true);
+            log(pId, "buy", null, "Player " + pId + " bought hex (" + row + "," + col + ").", null, null, row, col, null, null);
+            refreshGameStatus();
+            return true;
+        }
+        return false;
+    }
+
+    public void endTurn(Long gameId) {
+        if (isGameOver()) return;
+        log(currentPlayerId, "turn", null, "Player " + currentPlayerId + " resolved turn " + gameState.getTurnCount(), null, null, null, null, null, null);
+        gameState.resetStrategyCostForPlayer(currentPlayerId);
+
+        for (Minion m : gameState.getPlayer(currentPlayerId).getMinions().stream().filter(Objects::nonNull).collect(Collectors.toList())) {
+            if (isGameOver()) break;
+            if (isMinionActive(m)) executeStrategyNode(m.getStrategy(), new MinionContext(m, gameState), new StrategyExecutionState());
+            refreshGameStatus();
+        }
+
+        if (isGameOver()) return;
+        switchPlayer();
+        if (isGameOver()) return;
+        applyTurnEconomy();
+        refreshGameStatus();
+    }
+
+    public void endTurn() { endTurn(null); }
+
+    private void switchPlayer() {
+        currentPlayerId = (currentPlayerId == 1) ? 2 : 1;
+        if (currentPlayerId == 1) gameState.nextTurn();
+        gameState.setBoughtHexThisTurn(currentPlayerId, false);
+        gameState.setSpawnedThisTurn(currentPlayerId, false);
+        gameState.setActivePlayerId(currentPlayerId);
+    }
+
+    private void executeStrategyNode(Node node, MinionContext ctx, StrategyExecutionState state) {
+        if (node == null || state.done || state.budgetBlocked || gameState.isGameOver() || !isMinionActive(ctx.getMinion())) {
+            state.done = true; return;
+        }
+
+        if (node instanceof BlockNode b) {
+            for (Node n : b.getStatements()) {
+                executeStrategyNode(n, ctx, state);
+                if (state.done || state.budgetBlocked || gameState.isGameOver()) break;
+            }
+        } else if (node instanceof IfStatementNode i) {
+            try { executeStrategyNode(evaluate(i.getCondition(), ctx) > 0 ? i.getThenBlock() : i.getElseBlock(), ctx, state); }
+            catch (ArithmeticException e) { state.done = true; }
+        } else if (node instanceof WhileStatementNode w) {
+            int loops = 0;
+            while (!state.done && !state.budgetBlocked && !gameState.isGameOver() && loops++ < MAX_STRATEGY_LOOPS && isMinionActive(ctx.getMinion())) {
+                try { if (evaluate(w.getCondition(), ctx) <= 0) break; } catch (ArithmeticException e) { state.done = true; break; }
+                executeStrategyNode(w.getBody(), ctx, state);
+            }
+        } else if (node instanceof AssignmentNode a) {
+            if (!SPECIAL_VARS.contains(a.getIdentifier())) {
+                try { ctx.setVariable(a.getIdentifier(), evaluate(a.getExpression(), ctx)); }
+                catch (ArithmeticException e) { state.done = true; throw e; }
+            }
+        } else if (node instanceof ActionCommandNode ac) {
+            applyAction(ac, ctx, state);
+        }
+    }
+
+    private void applyAction(ActionCommandNode node, MinionContext ctx, StrategyExecutionState state) {
+        String act = node.getActionType();
+        Minion m = ctx.getMinion();
+        if ("done".equals(act)) {
+            log(m.getOwner().getId(), "done", m.getName(), m.getName() + " ended its turn.", m.getRow(), m.getCol(), null, null, null, null);
+            state.done = true; return;
+        }
+        Direction dir = Direction.from(node.getDirection());
+        if (dir == null) { state.done = true; return; }
+
+        if ("move".equals(act) && !state.moveUsed) {
+            state.moveUsed = true;
+            if (!handleMove(m, dir)) { state.budgetBlocked = true; state.done = true; }
+        } else if ("shoot".equals(act) && !state.shootUsed) {
+            try {
+                int exp = Math.max(0, (int) Math.min(Integer.MAX_VALUE, Math.max(Integer.MIN_VALUE, evaluate(node.getExpression(), ctx))));
+                state.shootUsed = true;
+                if (handleShoot(m, dir, exp)) refreshGameStatus();
+            } catch (ArithmeticException e) { state.done = true; }
+        }
+    }
+
+    private boolean handleMove(Minion m, Direction dir) {
+        Player p = m.getOwner();
+        int r = m.getRow(), c = m.getCol();
+        if (!p.spend(1)) {
+            log(p.getId(), "move", m.getName(), m.getName() + " failed to move " + dir.value + " due to budget.", r, c, null, null, null, null);
             return false;
         }
-    }
-
-    public boolean spawnMinion(int playerId, int row, int col, String typeName) {
-        // เช็คว่าเป็นตาของผู้เล่นหรือไม่
-        if (playerId != currentPlayerId) return false;
-
-        MinionType type = definedMinionTypes.get(typeName);
-        if (type == null) return false;
-
-        Player p = gameState.getPlayer(playerId);
-        if (!gameState.canSpawn(p, row, col)) return false;
-
-        // เช็คว่าเป็นการวาง Minion ตัวแรกสุดของผู้เล่นคนนี้หรือไม่ (ถ้า List ว่าง = ตัวแรก)
-        boolean isFreeSpawn = p.getMinions().isEmpty();
-
-        // คำนวณราคา: ถ้าตัวแรกให้ฟรี (cost = 0) ถ้าไม่ใช่ตัวแรกให้คิดราคาตามปกติ
-        long cost = isFreeSpawn ? 0 : (type.getDefense() + config.get("spawn_cost"));
-
-        if (p.spend(cost)) {
-            // สร้าง Minion (ส่งค่า defense, hp เป็น long)
-            Minion m = new Minion(p, type.getDefense(), type.getMaxHp(), type.getStrategyAST());
-            gameState.placeMinion(p, m, row, col);
+        gameState.addStrategyCostForPlayer(p.getId(), 1);
+        int[] t = gameState.getNeighbor(r, c, dir.value);
+        if (!gameState.isValidHex(t[0], t[1]) || gameState.getHex(t[0], t[1]).getOccupant() != null) {
+            log(p.getId(), "move", m.getName(), m.getName() + " tried to move " + dir.value + " but failed.", r, c, t[0], t[1], null, null);
             return true;
         }
-        return false;
+        gameState.getHex(r, c).setOccupant(null);
+        gameState.getHex(t[0], t[1]).setOccupant(m);
+        m.setPosition(t[0], t[1]);
+        log(p.getId(), "move", m.getName(), m.getName() + " moved " + dir.value + " to (" + t[0] + "," + t[1] + ").", r, c, t[0], t[1], null, null);
+        return true;
     }
 
-    // Overload สำหรับการทดสอบหรือ Auto Mode
-    public boolean spawnMinion(int playerId, int row, int col, long defense, String strategyCode) {
-        if (playerId != currentPlayerId) return false;
-
-        Player p = gameState.getPlayer(playerId);
-        if (!gameState.canSpawn(p, row, col)) return false;
-
-        // เช็คตัวแรกฟรีเช่นเดียวกัน
-        boolean isFreeSpawn = p.getMinions().isEmpty();
-        long cost = isFreeSpawn ? 0 : (defense + config.get("spawn_cost"));
-
-        if (p.spend(cost)) {
-            try {
-                List<String> tokens = new Tokenizer(strategyCode).tokenize();
-                Node ast = new Parser(tokens).parse();
-
-                Minion m = new Minion(p, defense, config.get("init_hp"), ast);
-                gameState.placeMinion(p, m, row, col);
-                return true;
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
+    private boolean handleShoot(Minion m, Direction dir, int exp) {
+        Player p = m.getOwner();
+        int r = m.getRow(), c = m.getCol();
+        if (!p.spend(exp + 2L)) {
+            log(p.getId(), "shoot", m.getName(), m.getName() + " failed to shoot " + dir.value + " due to budget.", r, c, null, null, null, null);
+            return false;
         }
-        return false;
-    }
+        gameState.addStrategyCostForPlayer(p.getId(), exp + 1);
+        int[] t = gameState.getNeighbor(r, c, dir.value);
+        Hex tgtHex = gameState.isValidHex(t[0], t[1]) ? gameState.getHex(t[0], t[1]) : null;
+        Minion tgt = tgtHex != null ? tgtHex.getOccupant() : null;
 
-    public boolean buyHex(int playerId, int row, int col) {
-        if (playerId != currentPlayerId) return false;
-        Player p = gameState.getPlayer(playerId);
-        return gameState.buyHex(p, row, col, config.get("hex_purchase_cost"));
-    }
-
-    // --- EndTurn แบบ Turn-based ---
-    public void endTurn() {
-        if (checkWinner() != 0) return;
-
-        // 1. รัน AI ของเจ้าของเทิร์นปัจจุบัน
-        Player currentP = gameState.getPlayer(currentPlayerId);
-        executeTeam(currentP);
-
-        // 2. สลับตาผู้เล่น (Switch Turn)
-        if (currentPlayerId == 1) {
-            currentPlayerId = 2;
+        if (tgt == null) {
+            log(p.getId(), "shoot", m.getName(), m.getName() + " missed.", r, c, null, null, t[0], t[1]);
         } else {
-            currentPlayerId = 1;
-            gameState.nextTurn(); // ขึ้นรอบใหม่เมื่อ P2 จบ
+            int dmg = Math.max(1, exp - tgt.getDefense());
+            tgt.takeDamage(dmg);
+            String msg = tgt.isAlive() ? m.getName() + " shot (" + t[0] + "," + t[1] + ") for " + dmg + " damage." : m.getName() + " defeated " + tgt.getName() + ".";
+            log(p.getId(), "shoot", m.getName(), msg, r, c, null, null, t[0], t[1]);
         }
-
-        // อัปเดตลง GameState ส่งไปให้หน้าเว็บ
-        gameState.setActivePlayerId(currentPlayerId);
-
-        // 3. เริ่มเทิร์นของผู้เล่นคนถัดไป (คิดเงิน)
-        if (!gameState.isGameOver()) {
-            startTurn(currentPlayerId);
-
-            // --- ส่วนที่เพิ่มสำหรับโหมด Solitaire ---
-            if ("solitaire".equals(this.gameMode) && currentPlayerId == 2) {
-                playBotTurn();
-            }
-        }
+        return true;
     }
 
-    private void executeTeam(Player p) {
-        for (Minion m : new java.util.ArrayList<>(p.getMinions())) {
-            if (!m.isAlive()) continue;
-            Node ast = m.getStrategyAST();
+    private long evaluate(ExpressionNode expr, MinionContext ctx) { return expr == null ? 0 : expr.evaluate(ctx); }
 
-            if (ast == null) {
-                System.out.println("[Debug] Minion " + m.getName() + " at (" + m.getRow() + "," + m.getCol() + ") has no strategy!");
-                continue;
-            }
-
-            System.out.println("[Debug] Executing strategy for P" + p.getId() + " minion at (" + m.getRow() + "," + m.getCol() + ")");
-
-            MinionContext ctx = new MinionContext(m, gameState);
-            new StrategyEvaluator().execute(ast, ctx);
-        }
+    private void log(int pId, String act, String minion, String msg, Integer fR, Integer fC, Integer tR, Integer tC, Integer tgtR, Integer tgtC) {
+        gameState.addBattleLog(new BattleLogEntry(gameState.getTurnCount(), pId, act, minion, msg, fR, fC, tR, tC, tgtR, tgtC));
     }
 
-    public int checkWinner() {
-        Player p1 = gameState.getPlayer(1);
-        Player p2 = gameState.getPlayer(2);
+    public int checkWinner() { return getGameState().getWinner(); }
 
-        // เช็ค elimination เฉพาะเมื่อทั้งสองฝ่ายเคย spawn แล้ว
-        boolean p1EverSpawned = p1.getMinions().size() > 0;
-        boolean p2EverSpawned = p2.getMinions().size() > 0;
-        if (p1EverSpawned && p2EverSpawned) {
-            boolean p1Dead = p1.getAliveMinionCount() == 0;
-            boolean p2Dead = p2.getAliveMinionCount() == 0;
-            if (p1Dead && p2Dead) return 3;
-            if (p1Dead) return 2;
-            if (p2Dead) return 1;
-        }
-
-        // max-turns tiebreak
-        if (gameState.isGameOver()) {
-            if (p1.getAliveMinionCount() > p2.getAliveMinionCount()) return 1;
-            if (p2.getAliveMinionCount() > p1.getAliveMinionCount()) return 2;
-            if (p1.getTotalHp() > p2.getTotalHp()) return 1;
-            if (p2.getTotalHp() > p1.getTotalHp()) return 2;
-            if (p1.getBudget() > p2.getBudget()) return 1;
-            if (p2.getBudget() > p1.getBudget()) return 2;
-            return 1; // spec tiebreak: P1 wins
-        }
-
-        return 0;
+    public void setPlayerStrategy(int pId, String script) {
+        try {
+            Node ast = new Parser(new Tokenizer(script).tokenize()).parse();
+            gameState.getMinionsOfPlayer(pId).forEach(m -> m.setStrategyAST(ast));
+            refreshGameStatus();
+        } catch (Exception ignored) {}
     }
 
-    public int getCurrentPlayerId() { return currentPlayerId; }
-    public GameState getGameState() { return gameState; }
-    public void setPlayerStrategy(int playerId, String script) {
-        // H-01 fix: set AST on each minion instead of executing immediately
-        List<String> tokens = new Tokenizer(script).tokenize();
-        Node strategyTree = new Parser(tokens).parse();
-        for (Minion minion : gameState.getMinionsOfPlayer(playerId)) {
-            minion.setStrategyAST(strategyTree);
-        }
+    public void validateScript(String script) throws Exception { new Parser(new Tokenizer(script).tokenize()).parse(); }
+
+    public Map<String, Object> validateStrategyInput(String script) {
+        if (script == null || script.isBlank()) return Map.of("valid", false, "ok", false, "message", "Strategy must not be empty");
+        try { validateScript(script); return Map.of("valid", true, "ok", true, "message", "Valid strategy"); }
+        catch (Exception e) { return Map.of("valid", false, "ok", false, "message", e.getMessage() != null ? e.getMessage() : "Invalid syntax"); }
     }
 
-    public void validateScript(String Strategy) throws Exception {
-        // ใช้ Tokenizer + Parser ที่มีอยู่แล้ว
-        List<String> tokens = new Tokenizer(Strategy).tokenize();
-        new Parser(tokens).parse();
-        // ถ้าไม่ throw = grammar ถูก
-    }
-
-    // --- Logic สำหรับ Bot ---
     public void playBotTurn() {
-        if (checkWinner() != 0) return; // ถ้าเกมจบแล้วไม่ต้องทำอะไร
+        if (isGameOver()) return;
         Player bot = gameState.getPlayer(currentPlayerId);
-
-        // 1. Bot พยายาม Spawn Minion (วนหาช่องว่างที่สามารถ Spawn ได้)
-        boolean hasSpawned = false;
-        for (int r = 1; r <= 8 && !hasSpawned; r++) {
-            for (int c = 1; c <= 8 && !hasSpawned; c++) {
+        if (bot.getBudget() >= config.get("hex_purchase_cost") && !gameState.hasBoughtHexThisTurn(bot.getId())) {
+            for (int r = 1; r <= 8; r++) for (int c = 1; c <= 8; c++) {
+                Hex h = gameState.getHex(r, c);
+                if (h != null && h.isBuyable() && buyHex(bot.getId(), r, c)) { r = 9; break; }
+            }
+        }
+        if (!definedMinionTypes.isEmpty() && !gameState.hasSpawnedThisTurn(bot.getId())) {
+            List<String> types = new ArrayList<>(definedMinionTypes.keySet());
+            for (int r = 1; r <= 8; r++) for (int c = 1; c <= 8; c++) {
                 if (gameState.canSpawn(bot, r, c)) {
-                    if (!definedMinionTypes.isEmpty()) {
-                        // สุ่มหยิบชนิดของ Minion ที่มีอยู่ในเกมมา 1 ชนิด
-                        List<String> types = new ArrayList<>(definedMinionTypes.keySet());
-                        String randomType = types.get((int) (Math.random() * types.size()));
-
-                        // วาง Minion (ฟังก์ชันนี้จะเช็คเรื่องงบ และตัวแรกฟรีให้เองที่เราแก้ไปก่อนหน้านี้)
-                        spawnMinion(currentPlayerId, r, c, randomType);
-                        hasSpawned = true; // Spawn ตัวเดียวพอแล้วค่อยไปลุยต่อเทิร์นหน้า
-                    }
+                    for (String t : types) if (spawnMinion(bot.getId(), r, c, t)) { r = 9; break; }
                 }
             }
         }
-
-        // 2. จบเทิร์นให้ Bot ทันที เพื่อประมวลผล Strategy และสลับตากลับ
         endTurn();
     }
 
+    private boolean isMinionActive(Minion m) { return m != null && m.isAlive() && gameState.isValidHex(m.getRow(), m.getCol()) && gameState.getHex(m.getRow(), m.getCol()).getOccupant() == m; }
+
+    private boolean isGameOver() { refreshGameStatus(); return gameState.isGameOver(); }
+
+    private void refreshGameStatus() {
+        gameState.removeDeadMinions();
+        gameState.setActivePlayerId(currentPlayerId);
+        int winner = determineWinner();
+        gameState.setWinner(winner);
+        gameState.setGameOver(winner != 0);
+    }
+
+    public int determineWinner() {
+        gameState.removeDeadMinions();
+        Player p1 = gameState.getPlayer(1), p2 = gameState.getPlayer(2);
+        int a1 = p1.getAliveMinionCount(), a2 = p2.getAliveMinionCount();
+        boolean s1 = gameState.getRemainingSpawns(1) < config.get("max_spawns"), s2 = gameState.getRemainingSpawns(2) < config.get("max_spawns");
+
+        if (s1 || s2) {
+            if (a1 == 0 && a2 == 0) return 3;
+            if (s1 && a1 == 0) return 2;
+            if (s2 && a2 == 0) return 1;
+        }
+        if (gameState.getPlayerTurnCount(1) >= MAX_GAME_TURNS && gameState.getPlayerTurnCount(2) >= MAX_GAME_TURNS) {
+            if (a1 != a2) return a1 > a2 ? 1 : 2;
+            if (p1.getTotalHp() != p2.getTotalHp()) return p1.getTotalHp() > p2.getTotalHp() ? 1 : 2;
+            return Double.compare(p1.getBudget(), p2.getBudget()) > 0 ? 1 : (Double.compare(p1.getBudget(), p2.getBudget()) < 0 ? 2 : 3);
+        }
+        return 0;
+    }
+
+    private static final class StrategyExecutionState { boolean done, budgetBlocked, moveUsed, shootUsed; }
+
+    private enum Direction {
+        UP("up"), UPRIGHT("upright"), DOWNRIGHT("downright"), DOWN("down"), DOWNLEFT("downleft"), UPLEFT("upleft");
+        final String value;
+        Direction(String value) { this.value = value; }
+        static Direction from(String raw) { return raw == null ? null : Arrays.stream(values()).filter(d -> d.value.equalsIgnoreCase(raw)).findFirst().orElse(null); }
+    }
 }

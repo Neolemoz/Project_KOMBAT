@@ -107,7 +107,7 @@ public class StrategyEvaluator {
     private static long calculateClosest(GameState gs, Minion me, boolean findAlly) {
         long bestValue = 0;
         int minDistance = Integer.MAX_VALUE;
-        String[] directions = {null, "up", "upright", "downright", "down", "downleft", "upleft"};
+        String[] directions = {null, "upright", "downright", "down", "downleft", "upleft", "up"};
 
         for (int dir = 1; dir <= 6; dir++) {
             int r = me.getRow();

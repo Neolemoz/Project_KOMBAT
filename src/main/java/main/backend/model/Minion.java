@@ -64,5 +64,6 @@ public class Minion {
     @JsonIgnore public Node getStrategy() { return strategyAST; }
 
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     public Map<String, Long> getMemory() { return memory; }
 }

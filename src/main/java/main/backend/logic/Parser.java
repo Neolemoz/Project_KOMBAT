@@ -87,6 +87,10 @@ public class Parser {
 
     private Node parseAction() {
         String action = consume(); // move, shoot, done
+        if (!action.equals("done") && !action.equals("move") && !action.equals("shoot")) {
+            throw new RuntimeException("Unknown command: " + action);
+        }
+
         String direction = "up";   // default
         ExpressionNode expr = null; // สำหรับ shoot
 
@@ -112,16 +116,8 @@ public class Parser {
 
     // --- Expression Parsing Hierarchy (แก้ไขใหม่ตาม Spec) ---
 
-    // Level 1: Comparisons (>, <) - ความสำคัญต่ำสุด
     private ExpressionNode parseExpression() {
-        ExpressionNode left = parseAdditive();
-
-        while (pos < tokens.size() && (peek().equals(">") || peek().equals("<"))) {
-            String op = consume();
-            ExpressionNode right = parseAdditive();
-            left = new BinaryOpNode(left, op, right);
-        }
-        return left;
+        return parseAdditive();
     }
 
     // Level 2: Addition/Subtraction (+, -)
@@ -183,7 +179,7 @@ public class Parser {
         t = consume();
         if (t.matches("\\d+")) {
             return new NumberNode(Long.parseLong(t));
-        } else if (t.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+        } else if (t.matches("[a-zA-Z][a-zA-Z0-9]*")) {
             return new VariableNode(t);
         } else if (t.equals("(")) { // รองรับวงเล็บ (Expression)
             ExpressionNode node = parseExpression(); // กลับไปเรียก Level 1

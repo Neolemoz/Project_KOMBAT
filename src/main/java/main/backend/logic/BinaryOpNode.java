@@ -25,8 +25,28 @@ public class BinaryOpNode implements ExpressionNode {
             case "*": return l * r;
             case "/": if (r == 0) throw new ArithmeticException("Division by zero"); return l / r;
             case "%": if (r == 0) throw new ArithmeticException("Division by zero"); return l % r;
-            case "^": return (long) Math.pow(l, r); // เพิ่มเผื่อไว้ในกรณีเรียก evaluate โดยตรง
+            case "^": return powLong(l, r);
             default: return 0;
         }
+    }
+
+    private long powLong(long base, long exponent) {
+        if (exponent < 0) {
+            return 0;
+        }
+
+        long result = 1L;
+        long factor = base;
+        long power = exponent;
+        while (power > 0) {
+            if ((power & 1L) == 1L) {
+                result *= factor;
+            }
+            power >>= 1;
+            if (power > 0) {
+                factor *= factor;
+            }
+        }
+        return result;
     }
 }
