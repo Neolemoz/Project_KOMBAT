@@ -54,18 +54,29 @@ public class GameService {
     }
 
     public void applyTurnEconomy() {
-        if (gameState.isGameOver()) return;
-        String economyKey = gameState.getTurnCount() + ":" + currentPlayerId;
+        applyTurnEconomy(gameState, currentPlayerId);
+    }
+
+    private void applyTurnEconomy(GameState state, int playerId) {
+        if (state == null || state.isGameOver()) return;
+        String economyKey = buildEconomyKey(state, playerId);
         if (!appliedTurnEconomyKeys.add(economyKey)) return;
 
-        Player player = gameState.getPlayer(currentPlayerId);
-        int turnNum = Math.max(1, gameState.getPlayerTurnCount(currentPlayerId) + 1);
+        Player player = state.getPlayer(playerId);
+        if (player == null) return;
+
+        int turnNum = Math.max(1, state.getPlayerTurnCount(playerId) + 1);
         double newBudget = player.getBudget() + config.get("turn_budget");
-        double interest = gameState.calculateInterest(newBudget, turnNum);
+        double interest = state.calculateInterest(newBudget, turnNum);
 
         player.setBudget(Math.min(newBudget + interest, config.get("max_budget")));
-        gameState.setInterestForPlayer(currentPlayerId, interest);
-        gameState.setPlayerTurnCount(currentPlayerId, turnNum);
+        state.setInterestForPlayer(playerId, interest);
+        state.setPlayerTurnCount(playerId, turnNum);
+    }
+
+    public void applyTurnEconomy(GameState state) {
+        GameState targetState = state != null ? state : gameState;
+        applyTurnEconomy(targetState, resolvePlayerId(targetState));
     }
 
     public boolean defineMinionType(String name, int hp, int defense, String script) {
@@ -122,15 +133,14 @@ public class GameService {
     }
 
     public void endTurn(Long gameId) {
-        if (isGameOver()) return;
+        endTurn(false);
+    }
+
+    private void endTurn(boolean ignoreTurnRequirement) {
+        if (isGameOver() || (!ignoreTurnRequirement && !canEndCurrentTurn())) return;
         log(currentPlayerId, "turn", null, "Player " + currentPlayerId + " resolved turn " + gameState.getTurnCount(), null, null, null, null, null, null);
         gameState.resetStrategyCostForPlayer(currentPlayerId);
-
-        for (Minion m : gameState.getPlayer(currentPlayerId).getMinions().stream().filter(Objects::nonNull).collect(Collectors.toList())) {
-            if (isGameOver()) break;
-            if (isMinionActive(m)) executeStrategyNode(m.getStrategy(), new MinionContext(m, gameState), new StrategyExecutionState());
-            refreshGameStatus();
-        }
+        executeMinionStrategies(null);
 
         if (isGameOver()) return;
         switchPlayer();
@@ -140,6 +150,39 @@ public class GameService {
     }
 
     public void endTurn() { endTurn(null); }
+
+    public boolean canEndCurrentTurn() {
+        if (gameState.isGameOver()) return false;
+        Player player = gameState.getPlayer(currentPlayerId);
+        if (player == null) return false;
+
+        boolean openingTurnWithoutSpawn = gameState.getPlayerTurnCount(currentPlayerId) <= 1
+                && gameState.getRemainingSpawns(currentPlayerId) == config.get("max_spawns")
+                && player.getMinions().isEmpty();
+        return !openingTurnWithoutSpawn;
+    }
+
+    public void executeMinionStrategies(GameState state) {
+        GameState targetState = state != null ? state : gameState;
+        int playerId = resolvePlayerId(targetState);
+        Player player = targetState.getPlayer(playerId);
+        if (player == null) return;
+
+        GameState previousState = this.gameState;
+        int previousPlayerId = this.currentPlayerId;
+        this.gameState = targetState;
+        this.currentPlayerId = playerId;
+        try {
+            for (Minion m : player.getMinions().stream().filter(Objects::nonNull).collect(Collectors.toList())) {
+                if (isGameOver()) break;
+                if (isMinionActive(m)) executeStrategyNode(m.getStrategy(), new MinionContext(m, gameState), new StrategyExecutionState());
+                refreshGameStatus();
+            }
+        } finally {
+            this.gameState = previousState;
+            this.currentPlayerId = previousPlayerId;
+        }
+    }
 
     private void switchPlayer() {
         currentPlayerId = (currentPlayerId == 1) ? 2 : 1;
@@ -256,7 +299,9 @@ public class GameService {
             Node ast = new Parser(new Tokenizer(script).tokenize()).parse();
             gameState.getMinionsOfPlayer(pId).forEach(m -> m.setStrategyAST(ast));
             refreshGameStatus();
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            throw new IllegalArgumentException(e.getMessage() != null ? e.getMessage() : "Invalid strategy");
+        }
     }
 
     public void validateScript(String script) throws Exception { new Parser(new Tokenizer(script).tokenize()).parse(); }
@@ -270,21 +315,25 @@ public class GameService {
     public void playBotTurn() {
         if (isGameOver()) return;
         Player bot = gameState.getPlayer(currentPlayerId);
+        boolean acted = false;
         if (bot.getBudget() >= config.get("hex_purchase_cost") && !gameState.hasBoughtHexThisTurn(bot.getId())) {
             for (int r = 1; r <= 8; r++) for (int c = 1; c <= 8; c++) {
                 Hex h = gameState.getHex(r, c);
-                if (h != null && h.isBuyable() && buyHex(bot.getId(), r, c)) { r = 9; break; }
+                if (h != null && h.isBuyable() && buyHex(bot.getId(), r, c)) { acted = true; r = 9; break; }
             }
         }
         if (!definedMinionTypes.isEmpty() && !gameState.hasSpawnedThisTurn(bot.getId())) {
             List<String> types = new ArrayList<>(definedMinionTypes.keySet());
             for (int r = 1; r <= 8; r++) for (int c = 1; c <= 8; c++) {
                 if (gameState.canSpawn(bot, r, c)) {
-                    for (String t : types) if (spawnMinion(bot.getId(), r, c, t)) { r = 9; break; }
+                    for (String t : types) if (spawnMinion(bot.getId(), r, c, t)) { acted = true; r = 9; break; }
                 }
             }
         }
-        endTurn();
+        if (!acted && !canEndCurrentTurn() && gameMode != null && !"duel".equalsIgnoreCase(gameMode)) {
+            log(currentPlayerId, "turn", null, "Bot could not perform a required opening action and the turn was skipped.", null, null, null, null, null, null);
+        }
+        endTurn(!acted && gameMode != null && !"duel".equalsIgnoreCase(gameMode));
     }
 
     private boolean isMinionActive(Minion m) { return m != null && m.isAlive() && gameState.isValidHex(m.getRow(), m.getCol()) && gameState.getHex(m.getRow(), m.getCol()).getOccupant() == m; }
@@ -316,6 +365,31 @@ public class GameService {
             return Double.compare(p1.getBudget(), p2.getBudget()) > 0 ? 1 : (Double.compare(p1.getBudget(), p2.getBudget()) < 0 ? 2 : 3);
         }
         return 0;
+    }
+
+    public int determineWinner(GameState state) {
+        GameState targetState = state != null ? state : gameState;
+        int playerId = resolvePlayerId(targetState);
+        GameState previousState = this.gameState;
+        int previousPlayerId = this.currentPlayerId;
+        this.gameState = targetState;
+        this.currentPlayerId = playerId;
+        try {
+            return determineWinner();
+        } finally {
+            this.gameState = previousState;
+            this.currentPlayerId = previousPlayerId;
+        }
+    }
+
+    private int resolvePlayerId(GameState state) {
+        if (state == null) return currentPlayerId;
+        int activePlayerId = state.getActivePlayerId();
+        return activePlayerId == 2 ? 2 : 1;
+    }
+
+    private String buildEconomyKey(GameState state, int playerId) {
+        return System.identityHashCode(state) + ":" + state.getTurnCount() + ":" + playerId;
     }
 
     private static final class StrategyExecutionState { boolean done, budgetBlocked, moveUsed, shootUsed; }

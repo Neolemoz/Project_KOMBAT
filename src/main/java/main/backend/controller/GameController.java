@@ -3,15 +3,20 @@ package main.backend.controller;
 import main.backend.model.GameState;
 import main.backend.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Controller
-@RestController           // ยังคง REST ไว้ด้วยสำหรับ /api/state และ /api/start
+@RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class GameController {
@@ -19,27 +24,12 @@ public class GameController {
     @Autowired
     private GameService gameService;
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-
-    // ── helper: broadcast state หลังทุก action ──
-    private void broadcast() {
-        messagingTemplate.convertAndSend("/topic/game", gameService.getGameState());
-    }
-
-    // ─────────────────────────────────────────────
-    // REST (ใช้ตอน setup ก่อนเกิม และ fallback)
-    // ─────────────────────────────────────────────
-
     @PostMapping("/start")
     public GameState startGame(@RequestBody(required = false) Map<String, Object> payload) {
-        String mode = (payload != null && payload.containsKey("mode"))
-                ? (String) payload.get("mode")
-                : "duel";
+        String mode = payload == null ? "duel" : parseString(payload, "mode", false, "duel");
         gameService.setGameMode(mode.toLowerCase());
         gameService.init();
         gameService.clearDefinedMinionTypes();
-        broadcast();
         return gameService.getGameState();
     }
 
@@ -51,10 +41,10 @@ public class GameController {
     @PostMapping("/minion_type")
     public boolean defineMinionType(@RequestBody Map<String, Object> payload) {
         boolean result = gameService.defineMinionType(
-                (String) payload.get("name"),
-                (int)    payload.get("hp"),
-                (int)    payload.get("defense"),
-                (String) payload.get("script")
+                parseString(payload, "name", true, null),
+                parseInt(payload, "hp"),
+                parseInt(payload, "defense"),
+                parseString(payload, "script", true, null)
         );
         return result;
     }
@@ -73,101 +63,88 @@ public class GameController {
         return gameService.checkWinner();
     }
 
-    // REST endpoints (fallback เมื่อ WebSocket ยังไม่ ready)
     @PostMapping("/endturn")
     public GameState endTurnRest() {
         gameService.endTurn();
-        broadcast();
         return gameService.getGameState();
     }
 
     @PostMapping("/buy")
-    public GameState buyHexRest(@RequestBody Map<String, Integer> payload) {
+    public GameState buyHexRest(@RequestBody Map<String, Object> payload) {
         int playerId = gameService.getCurrentPlayerId();
-        gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
-        broadcast();
+        gameService.buyHex(playerId, parseInt(payload, "row"), parseInt(payload, "col"));
         return gameService.getGameState();
     }
 
     @PostMapping("/spawn")
     public GameState spawnMinionRest(@RequestBody Map<String, Object> payload) {
         int playerId = gameService.getCurrentPlayerId();
-        int row = (int) payload.get("row");
-        int col = (int) payload.get("col");
+        int row = parseInt(payload, "row");
+        int col = parseInt(payload, "col");
         if (payload.containsKey("minionType")) {
-            gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
+            gameService.spawnMinion(playerId, row, col, parseString(payload, "minionType", true, null));
         } else {
-            long defense = Long.parseLong(payload.get("defense").toString());
+            long defense = parseLong(payload, "defense");
             gameService.spawnMinion(
                     playerId,
                     row,
                     col,
                     defense,
-                    (String) payload.get("strategy"),
-                    payload.get("name") == null ? "Minion" : payload.get("name").toString()
+                    parseString(payload, "strategy", true, null),
+                    parseString(payload, "name", false, "Minion")
             );
         }
-        broadcast();
         return gameService.getGameState();
     }
 
     @PostMapping("/bot-turn")
     public GameState botTurnRest() {
         gameService.playBotTurn();
-        broadcast();
         return gameService.getGameState();
     }
 
-    // ─────────────────────────────────────────────
-    // WebSocket — client ส่งมาที่ /app/...
-    // ─────────────────────────────────────────────
-
-    // client ส่ง: { "row": 2, "col": 3 }
-    @MessageMapping("/buy")
-    public void buyHex(Map<String, Integer> payload) {
-        int playerId = gameService.getCurrentPlayerId();
-        gameService.buyHex(playerId, payload.get("row"), payload.get("col"));
-        broadcast();
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleBadRequest(IllegalArgumentException error) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", error.getMessage());
+        body.put("message", error.getMessage());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        return body;
     }
 
-    // client ส่ง: { "row": 1, "col": 1, "minionType": "Warrior" }
-    //         หรือ: { "row": 1, "col": 1, "defense": 10, "strategy": "move up" }
-    @MessageMapping("/spawn")
-    public void spawnMinion(Map<String, Object> payload) {
-        int playerId = gameService.getCurrentPlayerId();
-        int row = (int) payload.get("row");
-        int col = (int) payload.get("col");
-
-        if (payload.containsKey("minionType")) {
-            gameService.spawnMinion(playerId, row, col, (String) payload.get("minionType"));
-        } else {
-            long defense = Long.parseLong(payload.get("defense").toString());
-            gameService.spawnMinion(
-                    playerId,
-                    row,
-                    col,
-                    defense,
-                    (String) payload.get("strategy"),
-                    payload.get("name") == null ? "Minion" : payload.get("name").toString()
-            );
+    private String parseString(Map<String, Object> payload, String key, boolean required, String defaultValue) {
+        if (payload == null || !payload.containsKey(key) || payload.get(key) == null) {
+            if (required) throw new IllegalArgumentException("Missing required field: " + key);
+            return defaultValue;
         }
-        broadcast();
+        String value = String.valueOf(payload.get(key)).trim();
+        if (required && value.isBlank()) {
+            throw new IllegalArgumentException("Field must not be blank: " + key);
+        }
+        return value.isBlank() ? defaultValue : value;
     }
 
-    // client ส่ง: {} (ไม่มี body)
-    @MessageMapping("/endturn")
-    public void endTurn() {
-        gameService.endTurn();
-        broadcast();
+    private int parseInt(Map<String, Object> payload, String key) {
+        long value = parseLong(payload, key);
+        if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Field out of range for int: " + key);
+        }
+        return (int) value;
     }
 
-    // client ส่ง: { "playerId": 1, "script": "move up" }
-    @MessageMapping("/strategy")
-    public void submitStrategy(Map<String, Object> payload) {
-        gameService.setPlayerStrategy(
-                (int) payload.get("playerId"),
-                (String) payload.get("script")
-        );
-        broadcast();
+    private long parseLong(Map<String, Object> payload, String key) {
+        if (payload == null || !payload.containsKey(key) || payload.get(key) == null) {
+            throw new IllegalArgumentException("Missing required field: " + key);
+        }
+        Object raw = payload.get(key);
+        if (raw instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(raw).trim());
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("Invalid numeric field: " + key);
+        }
     }
 }

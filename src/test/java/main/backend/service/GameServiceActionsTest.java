@@ -3,247 +3,172 @@ package main.backend.service;
 import main.backend.model.GameState;
 import main.backend.model.Minion;
 import main.backend.model.Player;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameServiceActionsTest extends GameServiceTestSupport {
 
-    @Test
-    void shouldValidateActionRulesAndExportReports() {
-        List<ScenarioResult> results = new ArrayList<>();
-        results.add(testValidMoveCostsOneMana());
-        results.add(testInvalidMoveStillCostsOneMana());
-        results.add(testShootUsesExpenditurePlusOneAndDealsExpectedDamage());
-        results.add(testShootHasMinimumDamageOfOne());
-        results.add(testShootCanHitAlly());
-        results.add(testDoneStopsFollowingActions());
-        results.add(testEachMinionCanMoveOnlyOnceEvenIfScriptRequestsMore());
-        results.add(testEachMinionCanShootOnlyOnceEvenIfScriptRequestsMore());
-        results.add(testMoveThenShootCanBothResolveInOneScript());
-        results.add(testLowBudgetBlocksMoveAndStopsFurtherExecution());
-        finalizeReport("actions", results);
+    @AfterAll
+    static void writeReport() {
+        new GameServiceActionsTest().writeScenarioReport("actions");
     }
 
-    private ScenarioResult testValidMoveCostsOneMana() {
+    @Test
+    void validMoveCostsOneManaAndChangesPosition() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
-        double beforeBudget = p1.getBudget();
+        double budgetBefore = p1.getBudget();
 
         Minion mover = placeMinion(game, p1, 4, 4, 3, 100, "Walker", "move down");
 
-        service.executeMinionStrategies(null);
-
-        boolean passed = mover.getRow() == 5
-                && mover.getCol() == 4
-                && p1.getBudget() == beforeBudget - 1;
-
-        return new ScenarioResult(
+        runScenario(
+                "actions",
                 "move_valid",
                 "move down from (4,4)",
                 "pos=(5,4), mana -1",
-                "pos=(" + mover.getRow() + "," + mover.getCol() + "), mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "A valid move should shift one hex and always cost 1 mana."
+                "Valid move should change position and cost 1 mana.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertPosition(mover, 5, 4);
+                    assertDoubleEquals(budgetBefore - 1, p1.getBudget());
+                },
+                () -> "pos=(" + mover.getRow() + "," + mover.getCol() + "), mana -" + (budgetBefore - p1.getBudget())
         );
     }
 
-    private ScenarioResult testInvalidMoveStillCostsOneMana() {
+    @Test
+    void invalidMoveStillCostsOneMana() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
-        double beforeBudget = p1.getBudget();
+        double budgetBefore = p1.getBudget();
 
         Minion edge = placeMinion(game, p1, 1, 1, 3, 100, "Edge", "move up");
 
-        service.executeMinionStrategies(null);
-
-        boolean passed = edge.getRow() == 1
-                && edge.getCol() == 1
-                && p1.getBudget() == beforeBudget - 1;
-
-        return new ScenarioResult(
+        runScenario(
+                "actions",
                 "move_invalid_border",
                 "move up from board edge",
                 "pos=(1,1), mana -1",
-                "pos=(" + edge.getRow() + "," + edge.getCol() + "), mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "An invalid move should be a no-op on position but still spend 1 mana."
+                "Invalid move should keep position but still spend mana.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertPosition(edge, 1, 1);
+                    assertDoubleEquals(budgetBefore - 1, p1.getBudget());
+                },
+                () -> "pos=(" + edge.getRow() + "," + edge.getCol() + "), mana -" + (budgetBefore - p1.getBudget())
         );
     }
 
-    private ScenarioResult testShootUsesExpenditurePlusOneAndDealsExpectedDamage() {
+    @Test
+    void shootUsesExpenditurePlusOneAndDealsDefenseReducedDamage() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
         Player p2 = game.getPlayer(2);
-        double beforeBudget = p1.getBudget();
+        double budgetBefore = p1.getBudget();
 
         placeMinion(game, p1, 4, 4, 0, 100, "Shooter", "shoot down 20");
         Minion target = placeMinion(game, p2, 5, 4, 5, 100, "Target", "done");
 
-        service.executeMinionStrategies(null);
-
-        boolean passed = target.getHp() == 85 && p1.getBudget() == beforeBudget - 21;
-
-        return new ScenarioResult(
+        runScenario(
+                "actions",
                 "shoot_damage_cost",
                 "shoot down 20 into defense 5",
                 "targetHp=85, mana -21",
-                "targetHp=" + target.getHp() + ", mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "Shoot cost should be expenditure + 1, damage should be max(1, expenditure - defense)."
+                "Shoot should cost exp+1 and damage should be exp-defense with minimum 1.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertEquals(85, target.getHp());
+                    assertDoubleEquals(budgetBefore - 21, p1.getBudget());
+                    assertEquals(21, game.getStrategyCostByPlayer().get(1));
+                },
+                () -> "targetHp=" + target.getHp() + ", mana -" + (budgetBefore - p1.getBudget())
         );
     }
 
-    private ScenarioResult testShootHasMinimumDamageOfOne() {
+    @Test
+    void shootHasMinimumDamageAndCanHitAllies() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
-        Player p2 = game.getPlayer(2);
 
         placeMinion(game, p1, 4, 4, 0, 100, "Shooter", "shoot down 3");
-        Minion target = placeMinion(game, p2, 5, 4, 10, 100, "Tank", "done");
+        Minion ally = placeMinion(game, p1, 5, 4, 10, 100, "Ally", "done");
 
-        service.executeMinionStrategies(null);
-
-        boolean passed = target.getHp() == 99;
-
-        return new ScenarioResult(
-                "shoot_min_damage",
-                "shoot down 3 into defense 10",
-                "targetHp=99",
-                "targetHp=" + target.getHp(),
-                passed,
-                "Shoot damage should never drop below 1."
+        runScenario(
+                "actions",
+                "shoot_min_damage_friendly_fire",
+                "shoot ally with expenditure 3 into defense 10",
+                "allyHp=99",
+                "Friendly fire is allowed and damage floor should be 1.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertEquals(99, ally.getHp());
+                },
+                () -> "allyHp=" + ally.getHp()
         );
     }
 
-    private ScenarioResult testShootCanHitAlly() {
+    @Test
+    void doneStopsLaterActionsInTheSameScript() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
-
-        placeMinion(game, p1, 4, 4, 0, 100, "Shooter", "shoot down 10");
-        Minion ally = placeMinion(game, p1, 5, 4, 4, 100, "Ally", "done");
-
-        service.executeMinionStrategies(null);
-
-        boolean passed = ally.getHp() == 94;
-
-        return new ScenarioResult(
-                "shoot_friendly_fire",
-                "shoot ally with expenditure 10 into defense 4",
-                "allyHp=94",
-                "allyHp=" + ally.getHp(),
-                passed,
-                "Current rules allow friendly fire, so ally should still take max(1, 10 - 4) damage."
-        );
-    }
-
-    private ScenarioResult testDoneStopsFollowingActions() {
-        GameService service = newService();
-        GameState game = service.getGameState();
-        Player p1 = game.getPlayer(1);
-        double beforeBudget = p1.getBudget();
+        double budgetBefore = p1.getBudget();
 
         Minion minion = placeMinion(game, p1, 4, 4, 0, 100, "Stopper", "done move down shoot down 10");
 
-        service.executeMinionStrategies(null);
-
-        boolean passed = minion.getRow() == 4
-                && minion.getCol() == 4
-                && Math.abs(p1.getBudget() - beforeBudget) < 0.000001;
-
-        return new ScenarioResult(
+        runScenario(
+                "actions",
                 "done_stops_actions",
                 "done move down shoot down 10",
                 "pos=(4,4), mana -0",
-                "pos=(" + minion.getRow() + "," + minion.getCol() + "), mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "done should stop any later actions in the same minion script."
+                "done should stop later actions in the same script.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertPosition(minion, 4, 4);
+                    assertDoubleEquals(budgetBefore, p1.getBudget());
+                },
+                () -> "pos=(" + minion.getRow() + "," + minion.getCol() + "), mana -" + (budgetBefore - p1.getBudget())
         );
     }
 
-    private ScenarioResult testEachMinionCanMoveOnlyOnceEvenIfScriptRequestsMore() {
-        GameService service = newService();
-        GameState game = service.getGameState();
-        Player p1 = game.getPlayer(1);
-        double beforeBudget = p1.getBudget();
-
-        Minion minion = placeMinion(game, p1, 4, 4, 0, 100, "Runner", "move down move down");
-
-        service.executeMinionStrategies(null);
-
-        boolean passed = minion.getRow() == 5
-                && minion.getCol() == 4
-                && Math.abs(p1.getBudget() - (beforeBudget - 1)) < 0.000001;
-
-        return new ScenarioResult(
-                "move_once_per_minion",
-                "move down move down",
-                "pos=(5,4), mana -1",
-                "pos=(" + minion.getRow() + "," + minion.getCol() + "), mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "GameService currently allows at most one move command per minion execution."
-        );
-    }
-
-    private ScenarioResult testEachMinionCanShootOnlyOnceEvenIfScriptRequestsMore() {
+    @Test
+    void oneMinionCanMoveAndShootAtMostOncePerExecution() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
         Player p2 = game.getPlayer(2);
-        double beforeBudget = p1.getBudget();
+        double budgetBefore = p1.getBudget();
 
-        placeMinion(game, p1, 4, 4, 0, 100, "Shooter", "shoot down 10 shoot down 10");
-        Minion target = placeMinion(game, p2, 5, 4, 0, 100, "Target", "done");
-
-        service.executeMinionStrategies(null);
-
-        boolean passed = target.getHp() == 90 && Math.abs(p1.getBudget() - (beforeBudget - 11)) < 0.000001;
-
-        return new ScenarioResult(
-                "shoot_once_per_minion",
-                "shoot down 10 shoot down 10",
-                "targetHp=90, mana -11",
-                "targetHp=" + target.getHp() + ", mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "GameService currently allows at most one shoot command per minion execution."
-        );
-    }
-
-    private ScenarioResult testMoveThenShootCanBothResolveInOneScript() {
-        GameService service = newService();
-        GameState game = service.getGameState();
-        Player p1 = game.getPlayer(1);
-        Player p2 = game.getPlayer(2);
-        double beforeBudget = p1.getBudget();
-
-        Minion actor = placeMinion(game, p1, 4, 4, 0, 100, "Combo", "move down shoot down 10");
+        Minion actor = placeMinion(game, p1, 4, 4, 0, 100, "Combo", "move down move down shoot down 10 shoot down 10");
         Minion target = placeMinion(game, p2, 6, 4, 0, 100, "Victim", "done");
 
-        service.executeMinionStrategies(null);
-
-        boolean passed = actor.getRow() == 5
-                && actor.getCol() == 4
-                && target.getHp() == 90
-                && Math.abs(p1.getBudget() - (beforeBudget - 12)) < 0.000001;
-
-        return new ScenarioResult(
-                "move_then_shoot_combo",
-                "move down then shoot down 10",
+        runScenario(
+                "actions",
+                "move_and_shoot_once_each",
+                "move down move down shoot down 10 shoot down 10",
                 "actor=(5,4), targetHp=90, mana -12",
-                "actor=(" + actor.getRow() + "," + actor.getCol() + "), targetHp=" + target.getHp()
-                        + ", mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "One move and one shoot can both happen in the same script execution."
+                "A minion should move at most once and shoot at most once.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertPosition(actor, 5, 4);
+                    assertEquals(90, target.getHp());
+                    assertDoubleEquals(budgetBefore - 12, p1.getBudget());
+                },
+                () -> "actor=(" + actor.getRow() + "," + actor.getCol() + "), targetHp=" + target.getHp()
+                        + ", mana -" + (budgetBefore - p1.getBudget())
         );
     }
 
-    private ScenarioResult testLowBudgetBlocksMoveAndStopsFurtherExecution() {
+    @Test
+    void lowBudgetBlocksMoveAndPreventsLaterActions() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
@@ -253,17 +178,65 @@ class GameServiceActionsTest extends GameServiceTestSupport {
         Minion actor = placeMinion(game, p1, 4, 4, 0, 100, "Poor", "move down shoot down 10");
         Minion target = placeMinion(game, p2, 5, 4, 0, 100, "Victim", "done");
 
-        service.executeMinionStrategies(null);
+        runScenario(
+                "actions",
+                "low_budget_blocks_actions",
+                "move down shoot down 10 with budget 0",
+                "actor stays, target untouched, mana 0",
+                "Budget failure on move should stop later actions.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertPosition(actor, 4, 4);
+                    assertEquals(100, target.getHp());
+                    assertDoubleEquals(0, p1.getBudget());
+                },
+                () -> "actor=(" + actor.getRow() + "," + actor.getCol() + "), targetHp=" + target.getHp()
+                        + ", mana=" + p1.getBudget()
+        );
+    }
 
-        boolean passed = actor.getRow() == 4 && target.getHp() == 100;
+    @Test
+    void invalidStrategyUpdateThrowsIllegalArgumentException() throws Exception {
+        GameService service = newService();
+        GameState game = service.getGameState();
+        placeMinion(game, game.getPlayer(1), 1, 1, 0, 100, "Unit", "done");
 
-        return new ScenarioResult(
-                "budget_block_move",
-                "budget=0 then move down shoot down 10",
-                "actor stays, targetHp=100",
-                "actor=(" + actor.getRow() + "," + actor.getCol() + "), targetHp=" + target.getHp(),
-                passed,
-                "A failed move from low budget sets the minion execution into blocked/done state."
+        runScenario(
+                "actions",
+                "invalid_strategy_update",
+                "setPlayerStrategy(1, \"if (\")",
+                "IllegalArgumentException",
+                "Invalid strategy updates should surface as errors.",
+                () -> assertThrows(IllegalArgumentException.class, () -> service.setPlayerStrategy(1, "if (")),
+                () -> "IllegalArgumentException thrown"
+        );
+    }
+
+    @Test
+    void executeMinionStrategiesUsesProvidedStateActivePlayer() throws Exception {
+        GameService service = newService();
+        GameState game = service.getGameState();
+        Player p1 = game.getPlayer(1);
+        Player p2 = game.getPlayer(2);
+
+        Minion p1Minion = placeMinion(game, p1, 4, 4, 0, 100, "P1Unit", "move down");
+        Minion p2Minion = placeMinion(game, p2, 6, 6, 0, 100, "P2Unit", "move up");
+        game.setActivePlayerId(2);
+
+        runScenario(
+                "actions",
+                "state_scoped_strategy_execution",
+                "executeMinionStrategies(game) with activePlayer=2",
+                "only P2 acts",
+                "Provided GameState active player should control execution.",
+                () -> {
+                    service.executeMinionStrategies(game);
+                    assertPosition(p1Minion, 4, 4);
+                    assertPosition(p2Minion, 5, 6);
+                    assertTrue(game.getBattleLog().stream().anyMatch(entry -> "move".equals(entry.getActionType())));
+                },
+                () -> "P1=(" + p1Minion.getRow() + "," + p1Minion.getCol() + "), P2=("
+                        + p2Minion.getRow() + "," + p2Minion.getCol() + ")"
         );
     }
 }

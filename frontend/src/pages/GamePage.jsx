@@ -10,6 +10,7 @@ const HEX_COST = 1000
 const DEFAULT_BOARD_ZOOM = 0.74
 const MIN_BOARD_ZOOM = 0.34
 const MAX_BOARD_ZOOM = 2.8
+const BOT_TURN_RETRY_LIMIT = 3
 
 function StatIcon({ kind }) {
   const shared = "h-4 w-4"
@@ -157,7 +158,6 @@ function PlayerStatusCard({
   mana,
   minionCount,
   totalHp,
-  hexSpend,
   strategySpend,
   interestGain,
   recentMessages = [],
@@ -186,11 +186,6 @@ function PlayerStatusCard({
         <StatCard icon="hp" label="Total HP" value={totalHp} valueClassName="text-emerald-200" />
 
         <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(2,6,23,0.18)] backdrop-blur-md transition-all duration-200">
-          <p className="text-xs uppercase tracking-[0.22em] text-slate-300/80">Hex Cost</p>
-          <p className="mt-3 text-xl font-semibold text-amber-200">{hexSpend}</p>
-        </div>
-
-        <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(2,6,23,0.18)] backdrop-blur-md transition-all duration-200">
           <p className="text-xs uppercase tracking-[0.22em] text-slate-300/80">Strategy Cost</p>
           <p className="mt-3 text-xl font-semibold text-rose-200">{strategySpend}</p>
         </div>
@@ -205,7 +200,12 @@ function PlayerStatusCard({
           <div className="no-scrollbar mt-3 max-h-28 space-y-1 overflow-y-auto text-xs leading-5 text-slate-200">
             {recentMessages.length ? (
               recentMessages.map((message, index) => (
-                <p key={`${player}-recent-${index}`}>{message}</p>
+                <p key={`${player}-recent-${index}`}>
+                  <span className="mr-1.5 inline-block min-w-[1.1rem] font-semibold text-slate-400">
+                    {index + 1}.
+                  </span>
+                  {message}
+                </p>
               ))
             ) : (
               <p className="text-slate-500">No recent actions</p>
@@ -258,6 +258,8 @@ export default function GamePage({
   const [pendingPurchaseHex, setPendingPurchaseHex] = useState(null)
   const [isSpawnModalOpen, setIsSpawnModalOpen] = useState(false)
   const [isResolvingTurn, setIsResolvingTurn] = useState(false)
+  const [botTurnRetryCount, setBotTurnRetryCount] = useState(0)
+  const [botTurnErrorMessage, setBotTurnErrorMessage] = useState(null)
   const [boardZoom, setBoardZoom] = useState(DEFAULT_BOARD_ZOOM)
   const [localBoardState, setLocalBoardState] = useState(() =>
     createInitialBoardState(8, 8, boardState)
@@ -304,6 +306,8 @@ export default function GamePage({
     setSelectedHex(null)
     setPendingPurchaseHex(null)
     setIsSpawnModalOpen(false)
+    setBotTurnRetryCount(0)
+    setBotTurnErrorMessage(null)
     setLocalBoardState((current) => clearSelections(current))
   }, [syncedActivePlayer])
 
@@ -348,6 +352,21 @@ export default function GamePage({
     () => turnActionLimits?.[activePlayer] ?? { boughtHex: false, spawned: false },
     [turnActionLimits, activePlayer]
   )
+  const boardStateForView = useMemo(() => {
+    if (!activeTurnActions.boughtHex) {
+      return localBoardState
+    }
+
+    return Object.fromEntries(
+      Object.entries(localBoardState).map(([key, cell]) => [
+        key,
+        {
+          ...cell,
+          isBuyable: false,
+        },
+      ])
+    )
+  }, [activeTurnActions.boughtHex, localBoardState])
   const normalizedMode = String(mode ?? "DUEL").toUpperCase()
   const isSolitaireMode = normalizedMode === "SOLITAIRE"
   const isAutoMode = normalizedMode === "AUTO"
@@ -388,38 +407,52 @@ export default function GamePage({
         entry?.message
     )
 
+    const recentTurnMessages = (playerId) => {
+      const playerEntries = actionable.filter((entry) => Number(entry?.playerId) === playerId)
+      if (!playerEntries.length) return []
+
+      const latestTurn = Math.max(
+        ...playerEntries.map((entry) => Number(entry?.turn ?? 0))
+      )
+
+      return playerEntries
+        .filter((entry) => Number(entry?.turn ?? 0) === latestTurn)
+        .map((entry) => entry.message)
+        .slice(0, 6)
+    }
+
     return {
-      P1: actionable
-        .filter((entry) => Number(entry?.playerId) === 1)
-        .map((entry) => entry.message)
-        .slice(-6),
-      P2: actionable
-        .filter((entry) => Number(entry?.playerId) === 2)
-        .map((entry) => entry.message)
-        .slice(-6),
+      P1: recentTurnMessages(1),
+      P2: recentTurnMessages(2),
     }
   }, [battleLog])
 
   useEffect(() => {
-    if (!isBotTurn || isResolvingTurn) return undefined
+    if (!isBotTurn || isResolvingTurn || botTurnRetryCount >= BOT_TURN_RETRY_LIMIT) return undefined
 
     const timeoutId = window.setTimeout(async () => {
       try {
         setIsResolvingTurn(true)
+        setBotTurnErrorMessage(null)
         setSelectedHex(null)
         setPendingPurchaseHex(null)
         setIsSpawnModalOpen(false)
         setLocalBoardState((current) => clearSelections(current))
         await onBotTurnServer?.()
+        setBotTurnRetryCount(0)
       } catch (error) {
         console.error("Failed to run bot turn", error)
+        setBotTurnRetryCount((current) => current + 1)
+        setBotTurnErrorMessage(
+          error?.message || "Bot turn failed. You can retry once the server is ready."
+        )
       } finally {
         setIsResolvingTurn(false)
       }
     }, 850)
 
     return () => window.clearTimeout(timeoutId)
-  }, [isBotTurn, isResolvingTurn, onBotTurnServer])
+  }, [botTurnRetryCount, isBotTurn, isResolvingTurn, onBotTurnServer])
 
   useEffect(() => {
     const viewport = boardViewportRef.current
@@ -531,6 +564,29 @@ export default function GamePage({
     }
   }
 
+  const handleRetryBotTurn = async () => {
+    if (!isBotTurn || isResolvingTurn) return
+
+    try {
+      setIsResolvingTurn(true)
+      setBotTurnErrorMessage(null)
+      setSelectedHex(null)
+      setPendingPurchaseHex(null)
+      setIsSpawnModalOpen(false)
+      setLocalBoardState((current) => clearSelections(current))
+      await onBotTurnServer?.()
+      setBotTurnRetryCount(0)
+    } catch (error) {
+      console.error("Failed to retry bot turn", error)
+      setBotTurnRetryCount((current) => current + 1)
+      setBotTurnErrorMessage(
+        error?.message || "Bot turn failed again. Please check the backend and retry."
+      )
+    } finally {
+      setIsResolvingTurn(false)
+    }
+  }
+
   const applyBoardZoom = (nextZoom, pointer) => {
     const viewport = boardViewportRef.current
     const clampedZoom = Math.min(MAX_BOARD_ZOOM, Math.max(MIN_BOARD_ZOOM, Number(nextZoom.toFixed(2))))
@@ -634,7 +690,6 @@ export default function GamePage({
           mana={displayedManaByPlayer.P1}
           minionCount={countsByPlayer.P1}
           totalHp={displayedTotalHpByPlayer.P1}
-          hexSpend={hexSpendByPlayer.P1}
           strategySpend={displayedStrategyCostByPlayer.P1}
           interestGain={localInterestByPlayer.P1}
           recentMessages={recentMessagesByPlayer.P1}
@@ -646,6 +701,26 @@ export default function GamePage({
           <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[32px] p-0">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/8 to-transparent" />
             <BoardParticles />
+            {botTurnErrorMessage ? (
+              <div className="absolute left-4 right-4 top-4 z-30">
+                <div className="flex flex-col gap-3 rounded-2xl border border-rose-300/30 bg-rose-950/80 px-4 py-3 text-sm text-rose-100 shadow-[0_20px_45px_rgba(2,6,23,0.4)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+                  <p className="leading-6">
+                    {botTurnErrorMessage}
+                    {botTurnRetryCount >= BOT_TURN_RETRY_LIMIT
+                      ? ` Automatic retries stopped after ${BOT_TURN_RETRY_LIMIT} attempts.`
+                      : ` Automatic retry ${botTurnRetryCount}/${BOT_TURN_RETRY_LIMIT}.`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRetryBotTurn}
+                    disabled={isResolvingTurn}
+                    className="rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Retry Bot Turn
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="pointer-events-none absolute right-2 top-2 z-20">
               <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-[rgba(7,12,28,0.58)] px-1.5 py-1.5 shadow-[0_16px_40px_rgba(2,6,23,0.45)] backdrop-blur-md transition-all duration-200">
                 <button
@@ -685,7 +760,7 @@ export default function GamePage({
                   <HexBoard
                     rows={8}
                     cols={8}
-                    boardState={localBoardState}
+                    boardState={boardStateForView}
                     activePlayer={activePlayer}
                     actionHighlight={latestActionHighlight}
                     buyHex={handleRequestBuyHex}
@@ -725,7 +800,6 @@ export default function GamePage({
           mana={displayedManaByPlayer.P2}
           minionCount={countsByPlayer.P2}
           totalHp={displayedTotalHpByPlayer.P2}
-          hexSpend={hexSpendByPlayer.P2}
           strategySpend={displayedStrategyCostByPlayer.P2}
           interestGain={localInterestByPlayer.P2}
           recentMessages={recentMessagesByPlayer.P2}

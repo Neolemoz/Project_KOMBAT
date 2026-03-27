@@ -3,17 +3,10 @@ package main.backend;
 import java.util.*;
 import java.util.regex.*;
 
-// ═══════════════════════════════════════════════════════
-//  KOMBAT — Standalone Terminal Runner
-//  compile:  javac Kombat.java
-//  run:      java Kombat
-// ═══════════════════════════════════════════════════════
 
 public class Kombat {
 
-    // ──────────────────────────────────────────────────
     // CONFIG
-    // ──────────────────────────────────────────────────
     static final long   INIT_BUDGET  = 10000;
     static final long   MAX_BUDGET   = 50000;
     static final int    INIT_HP      = 100;
@@ -21,10 +14,7 @@ public class Kombat {
     static final double INTEREST     = 5.0;
     static final int    MAX_TURNS    = 200;
 
-    // ──────────────────────────────────────────────────
     // MODEL
-    // ──────────────────────────────────────────────────
-
     static class Player {
         int id;
         double budget;
@@ -125,10 +115,7 @@ public class Kombat {
         }
     }
 
-    // ──────────────────────────────────────────────────
     // AST NODES
-    // ──────────────────────────────────────────────────
-
     interface Node {}
     interface Expr extends Node { long eval(Ctx ctx); }
 
@@ -166,10 +153,7 @@ public class Kombat {
     static class WhileNode implements Node { Expr cond; Node body; WhileNode(Expr c,Node b){cond=c;body=b;} }
     static class ActionNode implements Node { String action, dir; Expr amount; ActionNode(String a,String d,Expr e){action=a;dir=d;amount=e;} }
 
-    // ──────────────────────────────────────────────────
     // CONTEXT
-    // ──────────────────────────────────────────────────
-
     static class Ctx {
         Minion minion; GameState gs;
         Ctx(Minion m, GameState gs){ this.minion=m; this.gs=gs; }
@@ -219,7 +203,6 @@ public class Kombat {
         }
 
         private long closest(boolean ally) {
-            // dir 1=up 2=upright 3=downright 4=down 5=downleft 6=upleft  (spec order)
             String[] dirs = {"up","upright","downright","down","downleft","upleft"};
             long best = 0; int minDist = Integer.MAX_VALUE;
             for (int d = 0; d < 6; d++) {
@@ -229,12 +212,11 @@ public class Kombat {
                     if (!gs.valid(r,c)) break;
                     Minion t = gs.board[r][c].occupant;
                     if (t != null) {
-                        // ถ้าเจอ minion ฝั่งที่ต้องการ และใกล้กว่าตัวที่เจอก่อน
                         if ((t.owner == minion.owner) == ally && dist < minDist) {
                             minDist = dist;
                             best = (long)dist * 10 + (d + 1);
                         }
-                        break; // มีตัวขวางอยู่ ยิงทะลุไม่ได้ — หยุด scan ทิศนี้
+                        break;
                     }
                 }
             }
@@ -242,10 +224,7 @@ public class Kombat {
         }
     }
 
-    // ──────────────────────────────────────────────────
     // TOKENIZER
-    // ──────────────────────────────────────────────────
-
     static List<String> tokenize(String src) {
         List<String> tokens = new ArrayList<>();
         Pattern p = Pattern.compile("(#.*)|([a-zA-Z_]\\w*)|(\\d+)|([+\\-*/%^(){}<>=])");
@@ -257,10 +236,7 @@ public class Kombat {
         return tokens;
     }
 
-    // ──────────────────────────────────────────────────
     // PARSER
-    // ──────────────────────────────────────────────────
-
     static class Parser {
         List<String> tokens; int pos;
         Parser(List<String> t){ tokens=t; pos=0; }
@@ -311,7 +287,7 @@ public class Kombat {
             Expr amount = null;
             if (!action.equals("done") && pos < tokens.size()) {
                 String nx = peek();
-                if (nx.matches("up|down|upleft|upright|downleft|downright|right|left")) {
+                if (nx.matches("up|down|upleft|upright|downleft|downright")) {
                     dir = next();
                     // map right/left to nearest hex equivalent
                     if (dir.equals("right")) dir = "upright";
@@ -369,10 +345,7 @@ public class Kombat {
         }
     }
 
-    // ──────────────────────────────────────────────────
     // EVALUATOR
-    // ──────────────────────────────────────────────────
-
     static class Evaluator {
         boolean done = false;
 
@@ -496,9 +469,7 @@ public class Kombat {
     static Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) {
-        System.out.println("╔══════════════════════════════════╗");
         System.out.println("║        KOMBAT  Terminal          ║");
-        System.out.println("╚══════════════════════════════════╝");
         System.out.println();
 
         GameState gs = new GameState();
@@ -523,7 +494,7 @@ public class Kombat {
 
             System.out.println("── Turn " + turn + " ──");
 
-            // 1. evaluate ทั้งสองฝั่งบน board เดิม
+            // 1. evaluate ทั้งสองฝั่งบน board
             Pending a1 = planMinion(gs, m1);
             Pending a2 = planMinion(gs, m2);
 
@@ -553,7 +524,7 @@ public class Kombat {
         System.out.println("  เลือก strategy:");
         System.out.println("  [a] Aggressive Rusher — วิ่งเข้าหา ยิงทุก budget");
         System.out.println("  [b] Cautious Sniper   — รักษาระยะ ยิงปานกลาง ถ้าใกล้ถอย");
-        System.out.println("  [f] โหลดจากไฟล์: f /path/to/script.txt");
+        System.out.println("  [d] โหลดจากไฟล์: f /strategy.txt");
         System.out.println("  หรือพิมพ์ script เอง จบด้วย END");
         Node ast = readScript(p.id);
 

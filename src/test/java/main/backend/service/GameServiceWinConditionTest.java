@@ -2,49 +2,45 @@ package main.backend.service;
 
 import main.backend.model.GameState;
 import main.backend.model.Minion;
-import main.backend.model.Player;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameServiceWinConditionTest extends GameServiceTestSupport {
 
-    @Test
-    void shouldValidateWinConditionsAndExportReports() {
-        List<ScenarioResult> results = new ArrayList<>();
-        results.add(testDestroyingLastSpawnedEnemyWinsImmediately());
-        results.add(testMaxTurnsWinnerUsesAliveCountThenHpThenBudget());
-        results.add(testMaxTurnsCanEndInDraw());
-        finalizeReport("win-condition", results);
+    @AfterAll
+    static void writeReport() {
+        new GameServiceWinConditionTest().writeScenarioReport("win-condition");
     }
 
-    private ScenarioResult testDestroyingLastSpawnedEnemyWinsImmediately() {
+    @Test
+    void destroyingLastSpawnedEnemyWinsImmediately() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
-        Player p1 = game.getPlayer(1);
-        Player p2 = game.getPlayer(2);
 
-        placeMinion(game, p1, 4, 4, 0, 100, "Shooter", "shoot down 200");
-        placeMinion(game, p2, 5, 4, 0, 100, "OnlyEnemy", "done");
+        placeMinion(game, game.getPlayer(1), 4, 4, 0, 100, "Shooter", "shoot down 200");
+        placeMinion(game, game.getPlayer(2), 5, 4, 0, 100, "OnlyEnemy", "done");
 
-        int winnerBefore = service.checkWinner();
-        service.executeMinionStrategies(null);
-        int winnerAfter = service.checkWinner();
-
-        boolean passed = winnerBefore == 0 && winnerAfter == 1 && game.isGameOver();
-
-        return new ScenarioResult(
+        runScenario(
+                "win-condition",
                 "instant_win_on_last_enemy",
                 "kill enemy's last spawned minion",
                 "winner=1",
-                "winner=" + winnerAfter,
-                passed,
-                "Once a player has spawned and all their minions are dead, the opponent should win immediately."
+                "Removing the last spawned enemy should end the game immediately.",
+                () -> {
+                    assertEquals(0, service.checkWinner());
+                    service.executeMinionStrategies(null);
+                    assertEquals(1, service.checkWinner());
+                    assertTrue(game.isGameOver());
+                },
+                () -> "winner=" + service.checkWinner()
         );
     }
 
-    private ScenarioResult testMaxTurnsWinnerUsesAliveCountThenHpThenBudget() {
+    @Test
+    void determineWinnerUsesAliveCountThenHpThenBudgetAtTurnLimit() throws Exception {
         GameService aliveService = newService();
         GameState aliveGame = aliveService.getGameState();
         placeMinion(aliveGame, aliveGame.getPlayer(1), 1, 1, 0, 100, "P1A", "done");
@@ -52,8 +48,6 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         placeMinion(aliveGame, aliveGame.getPlayer(2), 8, 8, 0, 100, "P2A", "done");
         aliveGame.setPlayerTurnCount(1, aliveGame.getMaxTurns());
         aliveGame.setPlayerTurnCount(2, aliveGame.getMaxTurns());
-        int aliveWinner = aliveService.determineWinner(aliveGame);
-
         GameService hpService = newService();
         GameState hpGame = hpService.getGameState();
         Minion hpP1 = placeMinion(hpGame, hpGame.getPlayer(1), 1, 1, 0, 100, "P1", "done");
@@ -62,8 +56,6 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         hpP2.setHp(90);
         hpGame.setPlayerTurnCount(1, hpGame.getMaxTurns());
         hpGame.setPlayerTurnCount(2, hpGame.getMaxTurns());
-        int hpWinner = hpService.determineWinner(hpGame);
-
         GameService budgetService = newService();
         GameState budgetGame = budgetService.getGameState();
         Minion budgetP1 = placeMinion(budgetGame, budgetGame.getPlayer(1), 1, 1, 0, 100, "P1", "done");
@@ -74,21 +66,26 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         budgetGame.getPlayer(2).setBudget(400);
         budgetGame.setPlayerTurnCount(1, budgetGame.getMaxTurns());
         budgetGame.setPlayerTurnCount(2, budgetGame.getMaxTurns());
-        int budgetWinner = budgetService.determineWinner(budgetGame);
 
-        boolean passed = aliveWinner == 1 && hpWinner == 2 && budgetWinner == 1;
-
-        return new ScenarioResult(
+        runScenario(
+                "win-condition",
                 "endgame_tiebreakers",
                 "max turns with alive-count, hp, budget comparisons",
                 "alive->1, hp->2, budget->1",
-                "alive->" + aliveWinner + ", hp->" + hpWinner + ", budget->" + budgetWinner,
-                passed,
-                "At max turns, winner order is alive minions, then total HP, then remaining budget."
+                "Winner should use alive count, then HP, then budget.",
+                () -> {
+                    assertEquals(1, aliveService.determineWinner(aliveGame));
+                    assertEquals(2, hpService.determineWinner(hpGame));
+                    assertEquals(1, budgetService.determineWinner(budgetGame));
+                },
+                () -> "alive->" + aliveService.determineWinner(aliveGame)
+                        + ", hp->" + hpService.determineWinner(hpGame)
+                        + ", budget->" + budgetService.determineWinner(budgetGame)
         );
     }
 
-    private ScenarioResult testMaxTurnsCanEndInDraw() {
+    @Test
+    void determineWinnerReturnsDrawWhenEverythingIsEqualAtTurnLimit() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
 
@@ -99,16 +96,14 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         game.getPlayer(1).setBudget(300);
         game.getPlayer(2).setBudget(300);
 
-        int winner = service.determineWinner(game);
-        boolean passed = winner == 3;
-
-        return new ScenarioResult(
+        runScenario(
+                "win-condition",
                 "endgame_draw",
                 "max turns with equal alive count, hp, and budget",
                 "winner=3",
-                "winner=" + winner,
-                passed,
-                "Backend uses winner=3 to represent a draw."
+                "Winner should be draw when all tiebreakers are equal.",
+                () -> assertEquals(3, service.determineWinner(game)),
+                () -> "winner=" + service.determineWinner(game)
         );
     }
 }

@@ -3,6 +3,7 @@ import {
   PageShell,
   PageTopBar,
   BackButton,
+  PageSection,
 } from "../components/layout"
 import { Button } from "../components/ui/Button"
 import { ASSETS } from "../constants/assets"
@@ -74,44 +75,32 @@ export default function MinionTypePage({ onBack, onConfirm }) {
             })}
           </div>
 
-          <div className="mx-auto mt-12 flex w-full max-w-3xl flex-col items-center justify-between gap-4 rounded-xl border border-white/10 bg-black/40 px-6 py-4 backdrop-blur-md sm:flex-row">
-            <div className="flex items-center gap-3 text-white">
-              <Button
-                variant={p1Confirmed ? "primary" : "secondary"}
-                type="button"
-                className="px-4 py-2"
-                onClick={() => setP1Confirmed((p) => !p)}
-              >
-                P1
-              </Button>
-              <span className={cn("text-sm", p1Confirmed ? "text-green-400" : "text-white/60")}>
-                {p1Confirmed ? "READY" : "WAITING"}
-              </span>
-            </div>
+          <PageSection className="mt-12 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
+            <Button
+              variant={p1Confirmed ? "primary" : "secondary"}
+              type="button"
+              onClick={() => setP1Confirmed((p) => !p)}
+            >
+              {p1Confirmed ? "OK (P1)" : "WAITING (P1)"}
+            </Button>
 
-            <button
+            <Button
+              variant="primary"
               type="button"
               disabled={!canContinue}
               onClick={() => onConfirm(selectedType)}
-              className="rounded-lg bg-orange-500 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-45"
             >
-              CONTINUE
-            </button>
+              Continue
+            </Button>
 
-            <div className="flex items-center gap-3 text-white">
-              <Button
-                variant={p2Confirmed ? "primary" : "secondary"}
-                type="button"
-                className="px-4 py-2"
-                onClick={() => setP2Confirmed((p) => !p)}
-              >
-                P2
-              </Button>
-              <span className={cn("text-sm", p2Confirmed ? "text-green-400" : "text-white/60")}>
-                {p2Confirmed ? "READY" : "WAITING"}
-              </span>
-            </div>
-          </div>
+            <Button
+              variant={p2Confirmed ? "primary" : "secondary"}
+              type="button"
+              onClick={() => setP2Confirmed((p) => !p)}
+            >
+              {p2Confirmed ? "OK (P2)" : "WAITING (P2)"}
+            </Button>
+          </PageSection>
         </div>
       </div>
     </PageShell>
