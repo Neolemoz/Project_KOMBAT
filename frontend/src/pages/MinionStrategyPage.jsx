@@ -62,6 +62,7 @@ function canAdvanceFromConfig(config) {
 export default function MinionStrategyPage({
   selectedMinions = [],
   configs = {},
+  setupErrorMessage = null,
   onUpdateConfig,
   onBack,
   onFinishAll,
@@ -287,6 +288,18 @@ export default function MinionStrategyPage({
             subtitle="Configure each minion before battle."
             className={pageUi.titleBlock}
           />
+
+          {setupErrorMessage ? (
+            <div className="mb-4 w-full">
+              <Panel
+                title="Setup Error"
+                className="border-rose-300/30 bg-rose-950/35"
+                bodyClassName="text-sm leading-6 text-rose-100"
+              >
+                {setupErrorMessage}
+              </Panel>
+            </div>
+          ) : null}
         </div>
 
         <div className="min-h-0 w-full flex-1 overflow-hidden">

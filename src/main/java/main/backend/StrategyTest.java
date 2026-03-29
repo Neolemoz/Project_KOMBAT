@@ -9,7 +9,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class StrategyTest {
-    private static final String STRATEGY_FILE_PATH = "strategy.txt";
+    private static final String STRATEGY_FILE_PATH = "src/main/java/main/backend/strategy.txt";
 
     //โหลด strategy จากไฟล์
     static String loadStrategy(String path) {

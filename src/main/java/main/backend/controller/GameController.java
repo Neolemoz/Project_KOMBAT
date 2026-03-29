@@ -22,9 +22,14 @@ public class GameController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    // ── helper: broadcast state หลังทุก action ──
     private void broadcast() {
         messagingTemplate.convertAndSend("/topic/game", gameService.getGameState());
     }
+
+    // ─────────────────────────────────────────────
+    // REST (ใช้ตอน setup ก่อนเกิม และ fallback)
+    // ─────────────────────────────────────────────
 
     @PostMapping("/start")
     public GameState startGame(@RequestBody(required = false) Map<String, Object> payload) {
@@ -113,6 +118,11 @@ public class GameController {
         return gameService.getGameState();
     }
 
+    // ─────────────────────────────────────────────
+    // WebSocket — client ส่งมาที่ /app/...
+    // ─────────────────────────────────────────────
+
+    // client ส่ง: { "row": 2, "col": 3 }
     @MessageMapping("/buy")
     public void buyHex(Map<String, Integer> payload) {
         int playerId = gameService.getCurrentPlayerId();
@@ -120,6 +130,8 @@ public class GameController {
         broadcast();
     }
 
+    // client ส่ง: { "row": 1, "col": 1, "minionType": "Warrior" }
+    //         หรือ: { "row": 1, "col": 1, "defense": 10, "strategy": "move up" }
     @MessageMapping("/spawn")
     public void spawnMinion(Map<String, Object> payload) {
         int playerId = gameService.getCurrentPlayerId();
@@ -142,12 +154,14 @@ public class GameController {
         broadcast();
     }
 
+    // client ส่ง: {} (ไม่มี body)
     @MessageMapping("/endturn")
     public void endTurn() {
         gameService.endTurn();
         broadcast();
     }
 
+    // client ส่ง: { "playerId": 1, "script": "move up" }
     @MessageMapping("/strategy")
     public void submitStrategy(Map<String, Object> payload) {
         gameService.setPlayerStrategy(

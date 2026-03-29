@@ -1,227 +1,195 @@
 package main.backend.service;
 
 import main.backend.model.GameState;
-import main.backend.model.Hex;
-import main.backend.model.Minion;
 import main.backend.model.Player;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameServiceTurnFlowTest extends GameServiceTestSupport {
 
-    @Test
-    void shouldValidateTurnFlowRulesAndExportReports() {
-        List<ScenarioResult> results = new ArrayList<>();
-        results.add(testMinionsExecuteInCreationOrder());
-        results.add(testFirstSpawnIsFree());
-        results.add(testSecondSpawnInSameTurnIsBlocked());
-        results.add(testSpawnCostsConfiguredAmountAfterFirstFreeSpawn());
-        results.add(testSpawnRequiresOwnedEmptyHexForCurrentPlayer());
-        results.add(testCanBuyOnlyAdjacentNeutralHexOncePerTurn());
-        results.add(testTurnOneRequiresSpawnBeforeEndTurn());
-        results.add(testEndTurnSwitchesPlayerAndAdvancesRoundAfterPlayerTwo());
-        finalizeReport("turn-flow", results);
+    @AfterAll
+    static void writeReport() {
+        new GameServiceTurnFlowTest().writeScenarioReport("turn-flow");
     }
 
-    private ScenarioResult testMinionsExecuteInCreationOrder() {
+    @Test
+    void minionsExecuteInCreationOrder() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
 
-        Minion first = placeMinion(game, p1, 4, 4, 0, 100, "First", "move down");
-        Minion second = placeMinion(game, p1, 5, 4, 0, 100, "Second", "move down");
+        var first = placeMinion(game, p1, 4, 4, 0, 100, "First", "move down");
+        var second = placeMinion(game, p1, 5, 4, 0, 100, "Second", "move down");
 
-        service.executeMinionStrategies(null);
-
-        boolean passed = first.getRow() == 4
-                && first.getCol() == 4
-                && second.getRow() == 6
-                && second.getCol() == 4;
-
-        return new ScenarioResult(
+        runScenario(
+                "turn-flow",
                 "minion_order",
                 "First tries to enter Second's tile, then Second moves",
                 "First=(4,4), Second=(6,4)",
-                "First=(" + first.getRow() + "," + first.getCol() + "), Second=(" + second.getRow() + "," + second.getCol() + ")",
-                passed,
-                "If execution is in creation order, First is blocked before Second vacates the tile."
+                "Execution order should follow creation order.",
+                () -> {
+                    service.executeMinionStrategies(null);
+                    assertPosition(first, 4, 4);
+                    assertPosition(second, 6, 4);
+                },
+                () -> "First=(" + first.getRow() + "," + first.getCol() + "), Second=("
+                        + second.getRow() + "," + second.getCol() + ")"
         );
     }
 
-    private ScenarioResult testFirstSpawnIsFree() {
-        GameService service = newService();
-        GameState game = service.getGameState();
-        Player p1 = game.getPlayer(1);
-        double beforeBudget = p1.getBudget();
-
-        boolean spawned = service.spawnMinion(1, 1, 1, 3, "done", "Freebie");
-        Hex hex = game.getHex(1, 1);
-
-        boolean passed = spawned
-                && hex.getOccupant() != null
-                && Math.abs(p1.getBudget() - beforeBudget) < 0.000001;
-
-        return new ScenarioResult(
-                "first_spawn_free",
-                "spawn first minion on turn 1",
-                "spawned=true, mana -0",
-                "spawned=" + spawned + ", mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "First spawn of the game for a player is free when they have no minions on turn 1."
-        );
-    }
-
-    private ScenarioResult testSecondSpawnInSameTurnIsBlocked() {
-        GameService service = newService();
-        GameState game = service.getGameState();
-
-        boolean first = service.spawnMinion(1, 1, 1, 3, "done", "A");
-        boolean second = service.spawnMinion(1, 1, 2, 3, "done", "B");
-
-        boolean passed = first && !second && game.getHex(1, 2).getOccupant() == null;
-
-        return new ScenarioResult(
-                "spawn_once_per_turn",
-                "spawn twice in same turn",
-                "first=true, second=false",
-                "first=" + first + ", second=" + second,
-                passed,
-                "Each player can only spawn once per turn."
-        );
-    }
-
-    private ScenarioResult testSpawnCostsConfiguredAmountAfterFirstFreeSpawn() {
+    @Test
+    void firstSpawnIsFreeButLaterSpawnCostsConfiguredAmount() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
 
-        boolean first = service.spawnMinion(1, 1, 1, 3, "done", "Starter");
-        service.endTurn();
-        boolean p2First = service.spawnMinion(2, 8, 8, 3, "done", "Starter2");
-        service.endTurn();
-
-        double beforeBudget = p1.getBudget();
-        boolean second = service.spawnMinion(1, 1, 2, 3, "done", "Paid");
-
-        boolean passed = first
-                && p2First
-                && second
-                && Math.abs(p1.getBudget() - (beforeBudget - game.getSpawnCost())) < 0.000001;
-
-        return new ScenarioResult(
-                "spawn_paid_after_free",
-                "spawn again on later own turn",
-                "spawned=true, mana -" + game.getSpawnCost(),
-                "spawned=" + second + ", mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "Later spawns should use configured spawn cost."
+        double budgetBeforeFirstSpawn = p1.getBudget();
+        runScenario(
+                "turn-flow",
+                "spawn_free_then_paid",
+                "first spawn on turn 1, then later spawn on next own turn",
+                "first free, later spawn costs configured amount",
+                "First spawn is free and later spawns cost spawnCost.",
+                () -> {
+                    assertTrue(service.spawnMinion(1, 1, 1, 3, "done", "Starter"));
+                    assertDoubleEquals(budgetBeforeFirstSpawn, p1.getBudget());
+                    service.endTurn();
+                    assertTrue(service.spawnMinion(2, 8, 8, 3, "done", "EnemyStarter"));
+                    service.endTurn();
+                    double budgetBeforePaidSpawn = p1.getBudget();
+                    assertTrue(service.spawnMinion(1, 1, 2, 3, "done", "Paid"));
+                    assertDoubleEquals(budgetBeforePaidSpawn - game.getSpawnCost(), p1.getBudget());
+                },
+                () -> "P1 budget=" + p1.getBudget() + ", spawnCost=" + game.getSpawnCost()
         );
     }
 
-    private ScenarioResult testSpawnRequiresOwnedEmptyHexForCurrentPlayer() {
+    @Test
+    void spawnOnlyOncePerTurnAndOnlyOnOwnedEmptyHexOfCurrentPlayer() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
-        Player p1 = game.getPlayer(1);
 
-        placeMinion(game, p1, 1, 1, 0, 100, "Blocker", "done");
-
-        boolean wrongPlayer = service.spawnMinion(2, 8, 8, 3, "done", "EnemyTurn");
-        boolean occupiedHex = service.spawnMinion(1, 1, 1, 3, "done", "Occupied");
-        boolean neutralHex = service.spawnMinion(1, 4, 4, 3, "done", "Neutral");
-
-        boolean passed = !wrongPlayer && !occupiedHex && !neutralHex;
-
-        return new ScenarioResult(
+        runScenario(
+                "turn-flow",
                 "spawn_constraints",
-                "wrong player / occupied hex / neutral hex",
-                "all false",
-                wrongPlayer + "," + occupiedHex + "," + neutralHex,
-                passed,
-                "Spawn should require active player, owned hex, and empty tile."
+                "spawn twice / neutral hex / wrong player",
+                "first succeeds, others fail",
+                "Spawn should require active player, owned hex, empty tile, and once-per-turn.",
+                () -> {
+                    assertTrue(service.spawnMinion(1, 1, 1, 3, "done", "A"));
+                    assertFalse(service.spawnMinion(1, 1, 2, 3, "done", "B"));
+                    assertFalse(service.spawnMinion(1, 4, 4, 3, "done", "Neutral"));
+                    assertFalse(service.spawnMinion(2, 8, 8, 3, "done", "WrongPlayer"));
+                    assertNotNull(game.getHex(1, 1).getOccupant());
+                    assertEquals(null, game.getHex(1, 2).getOccupant());
+                },
+                () -> "hex(1,1)=" + (game.getHex(1, 1).getOccupant() != null) + ", hex(1,2)=" + game.getHex(1, 2).getOccupant()
         );
     }
 
-    private ScenarioResult testCanBuyOnlyAdjacentNeutralHexOncePerTurn() {
+    @Test
+    void buyHexCanHappenOnlyOncePerTurnAndMustBeAdjacentNeutral() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
         Player p1 = game.getPlayer(1);
-        double beforeBudget = p1.getBudget();
+        double budgetBefore = p1.getBudget();
 
-        boolean success = service.buyHex(1, 2, 3);
-        boolean secondBuySameTurn = service.buyHex(1, 2, 4);
-        boolean enemyOwned = service.buyHex(1, 8, 8);
-
-        boolean passed = success
-                && !secondBuySameTurn
-                && !enemyOwned
-                && game.getHex(2, 3).getOwner() == p1
-                && Math.abs(p1.getBudget() - (beforeBudget - 1000)) < 0.000001;
-
-        return new ScenarioResult(
+        runScenario(
+                "turn-flow",
                 "buy_hex_rules",
-                "buy adjacent neutral, then buy again, then enemy hex",
+                "buy adjacent neutral, then buy again, then enemy corner",
                 "true,false,false and mana -1000",
-                success + "," + secondBuySameTurn + "," + enemyOwned + " and mana -" + formatNumber(beforeBudget - p1.getBudget()),
-                passed,
-                "Buying a hex should require adjacency, neutrality, enough budget, and only happen once per turn."
+                "Buy hex should require adjacency, neutrality, enough budget, and once per turn.",
+                () -> {
+                    assertTrue(service.buyHex(1, 2, 3));
+                    assertFalse(service.buyHex(1, 2, 4));
+                    assertFalse(service.buyHex(1, 8, 8));
+                    assertEquals(p1, game.getHex(2, 3).getOwner());
+                    assertDoubleEquals(budgetBefore - 1000, p1.getBudget());
+                },
+                () -> "owner(2,3)=" + (game.getHex(2, 3).getOwner() != null ? game.getHex(2, 3).getOwner().getId() : null)
+                        + ", mana -" + (budgetBefore - p1.getBudget())
         );
     }
 
-    private ScenarioResult testEndTurnSwitchesPlayerAndAdvancesRoundAfterPlayerTwo() {
+    @Test
+    void openingTurnCannotEndBeforeFirstSpawn() throws Exception {
         GameService service = newService();
         GameState game = service.getGameState();
 
-        boolean p1Spawned = service.spawnMinion(1, 1, 1, 3, "done", "P1Starter");
-        service.endTurn();
-        String afterFirstSnapshot = "player=" + service.getCurrentPlayerId()
-                + ",turn=" + game.getTurnCount()
-                + ",p1Turns=" + game.getPlayerTurnCount(1)
-                + ",p2Turns=" + game.getPlayerTurnCount(2);
-        boolean afterFirstEnd = service.getCurrentPlayerId() == 2
-                && game.getTurnCount() == 1
-                && game.getPlayerTurnCount(2) == 1;
-
-        boolean p2Spawned = service.spawnMinion(2, 8, 8, 3, "done", "P2Starter");
-        service.endTurn();
-        String afterSecondSnapshot = "player=" + service.getCurrentPlayerId()
-                + ",turn=" + game.getTurnCount()
-                + ",p1Turns=" + game.getPlayerTurnCount(1)
-                + ",p2Turns=" + game.getPlayerTurnCount(2);
-        boolean afterSecondEnd = service.getCurrentPlayerId() == 1
-                && game.getTurnCount() == 2
-                && game.getPlayerTurnCount(1) == 2;
-
-        boolean passed = p1Spawned && p2Spawned && afterFirstEnd && afterSecondEnd;
-
-        return new ScenarioResult(
-                "turn_flow_switching",
-                "spawn once each, then endTurn by P1 then P2",
-                "after P1->P2 same round, after P2->P1 next round",
-                "after1=(" + afterFirstSnapshot + "), after2=(" + afterSecondSnapshot + ")",
-                passed,
-                "Turn count advances only when control returns from player 2 back to player 1."
-        );
-    }
-
-    private ScenarioResult testTurnOneRequiresSpawnBeforeEndTurn() {
-        GameService service = newService();
-        GameState game = service.getGameState();
-
-        service.endTurn();
-
-        boolean passed = service.getCurrentPlayerId() == 1
-                && game.getTurnCount() == 1
-                && service.canEndCurrentTurn() == false;
-
-        return new ScenarioResult(
+        runScenario(
+                "turn-flow",
                 "turn_one_spawn_required",
                 "try to end turn 1 without spawning",
                 "turn should not advance",
-                "player=" + service.getCurrentPlayerId() + ",turn=" + game.getTurnCount(),
-                passed,
-                "Each player must place their first minion on turn 1 before ending their turn, but buying a hex is optional."
+                "Opening turn should require first spawn before ending.",
+                () -> {
+                    assertFalse(service.canEndCurrentTurn());
+                    service.endTurn();
+                    assertEquals(1, service.getCurrentPlayerId());
+                    assertEquals(1, game.getTurnCount());
+                },
+                () -> "player=" + service.getCurrentPlayerId() + ",turn=" + game.getTurnCount()
+        );
+    }
+
+    @Test
+    void endTurnSwitchesPlayerAndAdvancesRoundAfterPlayerTwo() throws Exception {
+        GameService service = newService();
+        GameState game = service.getGameState();
+
+        runScenario(
+                "turn-flow",
+                "turn_flow_switching",
+                "spawn once each, then endTurn by P1 then P2",
+                "after P1->P2 same round, after P2->P1 next round",
+                "Turn count should advance after player 2 hands back to player 1.",
+                () -> {
+                    assertTrue(service.spawnMinion(1, 1, 1, 3, "done", "P1Starter"));
+                    service.endTurn();
+                    assertEquals(2, service.getCurrentPlayerId());
+                    assertEquals(1, game.getTurnCount());
+                    assertEquals(1, game.getPlayerTurnCount(2));
+                    assertTrue(service.spawnMinion(2, 8, 8, 3, "done", "P2Starter"));
+                    service.endTurn();
+                    assertEquals(1, service.getCurrentPlayerId());
+                    assertEquals(2, game.getTurnCount());
+                    assertEquals(2, game.getPlayerTurnCount(1));
+                },
+                () -> "player=" + service.getCurrentPlayerId() + ",turn=" + game.getTurnCount()
+                        + ",turns=(" + game.getPlayerTurnCount(1) + "," + game.getPlayerTurnCount(2) + ")"
+        );
+    }
+
+    @Test
+    void botTurnWithoutRegisteredMinionTypesDoesNotDeadlock() throws Exception {
+        GameService service = newService();
+        GameState game = service.getGameState();
+        service.setGameMode("solo");
+
+        runScenario(
+                "turn-flow",
+                "bot_turn_no_deadlock",
+                "solo mode bot turn without registered minion types",
+                "control returns to P1 next round",
+                "Bot should not deadlock even when no minion types are defined.",
+                () -> {
+                    assertTrue(service.spawnMinion(1, 1, 1, 3, "done", "P1Starter"));
+                    service.endTurn();
+                    int turnBefore = game.getTurnCount();
+                    service.playBotTurn();
+                    assertEquals(1, service.getCurrentPlayerId());
+                    assertEquals(turnBefore + 1, game.getTurnCount());
+                    assertEquals(2, game.getPlayerTurnCount(1));
+                    assertEquals(1, game.getPlayerTurnCount(2));
+                },
+                () -> "player=" + service.getCurrentPlayerId() + ",turn=" + game.getTurnCount()
+                        + ",turns=(" + game.getPlayerTurnCount(1) + "," + game.getPlayerTurnCount(2) + ")"
         );
     }
 }

@@ -192,6 +192,7 @@ export default function App() {
     P1: 0,
     P2: 0,
   })
+  const [setupErrorMessage, setSetupErrorMessage] = useState(null)
 
   const applyServerGameState = (gameState) => {
     if (!gameState) return
@@ -277,6 +278,7 @@ export default function App() {
       if (page !== FLOW.GAME) return
 
       try {
+        setSetupErrorMessage(null)
         const gameState = await apiFetch("/api/start", {
           method: "POST",
           body: JSON.stringify({
@@ -291,6 +293,12 @@ export default function App() {
         }
       } catch (error) {
         console.error("Failed to start backend game", error)
+        if (!cancelled) {
+          setSetupErrorMessage(
+            error?.message || "Failed to prepare the battle. Please review your minion setup and try again."
+          )
+          setPage(FLOW.MINION_STRATEGY)
+        }
       }
     }
 
@@ -319,7 +327,7 @@ export default function App() {
     })
 
     for (const type of uniqueTypes) {
-      await apiFetch("/api/minion_type", {
+      const didRegister = await apiFetch("/api/minion_type", {
         method: "POST",
         body: JSON.stringify({
           name: type.name,
@@ -328,6 +336,12 @@ export default function App() {
           script: type.strategy ?? "",
         }),
       })
+
+      if (!didRegister) {
+        throw new Error(
+          `Failed to register minion type "${type.name}". Please revalidate its strategy and try again.`
+        )
+      }
     }
   }
 
@@ -399,6 +413,7 @@ export default function App() {
   }
 
   const handlePlayAgain = () => {
+    setSetupErrorMessage(null)
     resetResultState()
     setBoardState(createEmptyBoard())
     setManaByPlayer({ P1: 0, P2: 0 })
@@ -416,6 +431,7 @@ export default function App() {
   }
 
   const handleGoHome = () => {
+    setSetupErrorMessage(null)
     resetResultState()
     setPage(FLOW.HOME)
   }
@@ -491,6 +507,7 @@ export default function App() {
           setSelectedMinions(payload.selectedMinions)
           setConfigsByMinionId({})
           setMinionConfigs(null)
+          setSetupErrorMessage(null)
           setManaByPlayer({ P1: 0, P2: 0 })
           setBoardState(createEmptyBoard())
           resetResultState()
@@ -505,6 +522,7 @@ export default function App() {
       <MinionStrategyPage
         selectedMinions={selectedMinions}
         configs={configsByMinionId}
+        setupErrorMessage={setupErrorMessage}
         onUpdateConfig={updateConfig}
         onBack={() => setPage(FLOW.MINION_SELECT)}
         onFinishAll={() => {
@@ -515,6 +533,7 @@ export default function App() {
             config: configsByMinionId[minion.id],
           }))
           setMinionConfigs(payload)
+          setSetupErrorMessage(null)
           setBoardState(createEmptyBoard())
           setManaByPlayer({ P1: 0, P2: 0 })
           resetResultState()

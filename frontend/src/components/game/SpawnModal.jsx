@@ -1,24 +1,44 @@
 import { createPortal } from "react-dom"
 
+function getMinionImageStyle(minion) {
+  const key = String(minion?.name || minion?.id || "").toLowerCase()
+
+  if (key.includes("stony")) {
+    return { objectPosition: "center 58%", transform: "scale(1.02)" }
+  }
+
+  if (key.includes("robolo")) {
+    return { objectPosition: "center 54%", transform: "scale(1.08)" }
+  }
+
+  if (key.includes("palrose") || key.includes("warrior")) {
+    return { objectPosition: "center 56%", transform: "scale(1.04)" }
+  }
+
+  return { objectPosition: "center center", transform: "scale(1.02)" }
+}
+
 function MinionCard({ minion, disabled, onSelect, priceLabel }) {
+  const imageStyle = getMinionImageStyle(minion)
+
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={() => onSelect?.(minion)}
       className={[
-        "group min-w-0 rounded-[28px] border p-4 text-left transition",
+        "group w-full max-w-[290px] min-w-0 rounded-[24px] border p-3 text-left transition",
         "border-white/8 bg-[#141a3a]/92 shadow-[0_18px_50px_rgba(0,0,0,0.28)]",
         "hover:border-amber-200/35 hover:bg-[#1a2146] disabled:cursor-not-allowed disabled:opacity-40",
       ].join(" ")}
     >
-      <div className="relative overflow-hidden rounded-[22px] bg-[#f3f4f7] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-        <div className="absolute inset-0 bg-gradient-to-b from-amber-200/10 to-transparent" />
-        <div className="aspect-[3/4] w-full overflow-hidden">
+      <div className="relative overflow-hidden rounded-[20px] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+        <div className="h-[170px] w-full overflow-hidden sm:h-[185px]">
           <img
             src={minion.imageUrl || "/minion-robot.png"}
             alt={minion.name}
-            className="h-full w-full object-contain object-center transition duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.08]"
+            style={imageStyle}
             draggable={false}
           />
         </div>
@@ -42,9 +62,9 @@ function MinionCard({ minion, disabled, onSelect, priceLabel }) {
         </div>
       </div>
 
-      <div className="mt-4 rounded-[18px] border border-white/8 bg-slate-950/40 p-3">
+      <div className="mt-3 rounded-[18px] border border-white/8 bg-slate-950/40 p-3">
         <p className="text-xs uppercase tracking-[0.26em] text-slate-400">Strategy</p>
-        <div className="mt-2 max-h-40 overflow-y-auto pr-1">
+        <div className="mt-2 max-h-24 overflow-y-auto pr-1">
           <p className="whitespace-pre-wrap break-words text-xs leading-6 text-slate-200">
             {minion.strategy || "No strategy"}
           </p>
@@ -75,7 +95,7 @@ export default function SpawnModal({
         <div className="absolute bottom-[10%] right-[18%] h-72 w-72 rounded-full bg-violet-300/8 blur-[135px]" />
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-[70vw] min-w-[320px] max-h-[78vh] flex-col overflow-hidden rounded-[42px] border border-white/12 bg-[linear-gradient(180deg,rgba(10,16,40,0.72),rgba(8,12,30,0.60))] shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_90px_rgba(2,6,23,0.45),0_0_50px_rgba(250,204,21,0.08)] backdrop-blur-2xl lg:max-w-[72vw]">
+      <div className="relative mx-auto flex h-[82vh] w-full max-w-[88vw] min-w-[320px] flex-col overflow-hidden rounded-[42px] border border-white/12 bg-[linear-gradient(180deg,rgba(10,16,40,0.72),rgba(8,12,30,0.60))] shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_90px_rgba(2,6,23,0.45),0_0_50px_rgba(250,204,21,0.08)] backdrop-blur-2xl 2xl:max-w-[1580px]">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/40 to-transparent" />
           <div className="absolute inset-x-10 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(255,233,160,0.12),transparent_60%)]" />
@@ -87,13 +107,15 @@ export default function SpawnModal({
         <div className="mb-5 flex shrink-0 flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1 max-w-4xl">
             <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">Choose Minion Type</p>
-            <h2 className="mt-2 break-words text-2xl font-bold text-white">Spawn on Hex {selectedHex.row},{selectedHex.col}</h2>
-            <p className="mt-2 max-w-[70ch] text-sm leading-7 text-slate-200">
+            <h2 className="mt-3 break-words text-2xl font-bold text-white">
+              Spawn on Hex {selectedHex.row},{selectedHex.col}
+            </h2>
+            <p className="mt-4 max-w-[70ch] text-sm leading-8 text-slate-200">
               Select a configured minion type to spawn immediately on the highlighted hex.
               Cards are disabled if you do not have enough mana.
             </p>
             {isFreeSpawn ? (
-              <p className="mt-3 max-w-[36ch] text-lg font-bold uppercase tracking-wide text-emerald-300">
+              <p className="mt-4 whitespace-nowrap text-base font-bold uppercase tracking-wide text-emerald-300 sm:text-lg">
                 First spawn on turn 1 is free for this player.
               </p>
             ) : null}
@@ -115,7 +137,7 @@ export default function SpawnModal({
         </div>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid min-w-0 justify-items-center grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {minionTypes.map((minion) => (
               <MinionCard
                 key={minion.id}

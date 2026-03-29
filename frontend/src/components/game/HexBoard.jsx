@@ -10,6 +10,12 @@ function shortLabel(name) {
   return String(name || "").slice(0, 3).toUpperCase()
 }
 
+function resolveMinionOwner(hex) {
+  if (hex?.minion?.ownerId === 1 || hex?.minion?.owner === "P1") return "PLAYER_1"
+  if (hex?.minion?.ownerId === 2 || hex?.minion?.owner === "P2") return "PLAYER_2"
+  return normalizeOwner(hex?.owner)
+}
+
 function hexPointsFlatTop(cx, cy, size) {
   const points = []
 
@@ -244,6 +250,47 @@ export default function HexBoard({
       .filter((item) => item.hex)
   }, [actionHighlight, layout.cells])
 
+  const spawnIndexByCellKey = useMemo(() => {
+    const groups = {
+      PLAYER_1: [],
+      PLAYER_2: [],
+    }
+
+    for (const cell of layout.cells) {
+      if (!cell?.isOccupied || !cell?.minion) continue
+      const owner = resolveMinionOwner(cell)
+      if (!owner) continue
+      groups[owner].push(cell)
+    }
+
+    const next = {}
+
+    for (const owner of Object.keys(groups)) {
+      groups[owner]
+        .sort((left, right) => {
+          const leftCreatedAt = Number(left.minion?.createdAt ?? 0)
+          const rightCreatedAt = Number(right.minion?.createdAt ?? 0)
+
+          if (leftCreatedAt && rightCreatedAt && leftCreatedAt !== rightCreatedAt) {
+            return leftCreatedAt - rightCreatedAt
+          }
+
+          const leftId = String(left.minion?.id ?? "")
+          const rightId = String(right.minion?.id ?? "")
+          if (leftId && rightId && leftId !== rightId) {
+            return leftId.localeCompare(rightId)
+          }
+
+          return left.row - right.row || left.col - right.col
+        })
+        .forEach((cell, index) => {
+          next[cell.key] = index + 1
+        })
+    }
+
+    return next
+  }, [layout.cells])
+
   return (
     <div
       className={`relative min-h-0 min-w-0 ${className}`}
@@ -407,13 +454,46 @@ export default function HexBoard({
 
               {hex.isOccupied && hex.minion ? (
                 <g style={{ pointerEvents: "none" }}>
+                  <rect
+                    x={hex.x - 16}
+                    y={hex.y - 30}
+                    width="32"
+                    height="16"
+                    rx="8"
+                    fill={
+                      resolveMinionOwner(hex) === "PLAYER_1"
+                        ? "rgba(16,64,108,0.94)"
+                        : "rgba(114,33,74,0.94)"
+                    }
+                    stroke={
+                      resolveMinionOwner(hex) === "PLAYER_1"
+                        ? "rgba(125,211,252,0.42)"
+                        : "rgba(249,168,212,0.42)"
+                    }
+                  />
                   <text
                     x={hex.x}
-                    y={hex.y - 8}
+                    y={hex.y - 19}
                     textAnchor="middle"
-                    fontSize="14"
+                    fontSize="10.5"
                     fontWeight="800"
                     fill="rgba(255,255,255,0.96)"
+                    letterSpacing="0.08em"
+                  >
+                    {spawnIndexByCellKey[hex.key] ?? 1}
+                  </text>
+
+                  <text
+                    x={hex.x}
+                    y={hex.y - 1}
+                    textAnchor="middle"
+                    fontSize="12.5"
+                    fontWeight="800"
+                    fill="rgba(248,250,252,0.98)"
+                    stroke="rgba(15,23,42,0.7)"
+                    strokeWidth="0.85"
+                    paintOrder="stroke"
+                    letterSpacing="0.04em"
                   >
                     {shortLabel(hex.minion.name)}
                   </text>
@@ -424,8 +504,16 @@ export default function HexBoard({
                     width="48"
                     height="20"
                     rx="10"
-                    fill="rgba(2,6,23,0.82)"
-                    stroke="rgba(255,255,255,0.14)"
+                    fill={
+                      resolveMinionOwner(hex) === "PLAYER_1"
+                        ? "rgba(16,64,108,0.94)"
+                        : "rgba(114,33,74,0.94)"
+                    }
+                    stroke={
+                      resolveMinionOwner(hex) === "PLAYER_1"
+                        ? "rgba(125,211,252,0.42)"
+                        : "rgba(249,168,212,0.42)"
+                    }
                   />
 
                   <text
