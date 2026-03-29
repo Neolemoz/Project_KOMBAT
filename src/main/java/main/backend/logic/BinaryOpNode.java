@@ -10,7 +10,6 @@ public class BinaryOpNode implements ExpressionNode {
         this.right = right;
     }
 
-    // เพิ่ม 3 Methods นี้
     public ExpressionNode getLeft() { return left; }
     public ExpressionNode getRight() { return right; }
     public String getOperator() { return operator; }

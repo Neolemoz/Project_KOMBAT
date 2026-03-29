@@ -52,7 +52,7 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         placeMinion(aliveGame, aliveGame.getPlayer(2), 8, 8, 0, 100, "P2A", "done");
         aliveGame.setPlayerTurnCount(1, aliveGame.getMaxTurns());
         aliveGame.setPlayerTurnCount(2, aliveGame.getMaxTurns());
-        int aliveWinner = aliveService.determineWinner(aliveGame);
+        int aliveWinner = aliveService.determineWinner();
 
         GameService hpService = newService();
         GameState hpGame = hpService.getGameState();
@@ -62,7 +62,7 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         hpP2.setHp(90);
         hpGame.setPlayerTurnCount(1, hpGame.getMaxTurns());
         hpGame.setPlayerTurnCount(2, hpGame.getMaxTurns());
-        int hpWinner = hpService.determineWinner(hpGame);
+        int hpWinner = hpService.determineWinner();
 
         GameService budgetService = newService();
         GameState budgetGame = budgetService.getGameState();
@@ -74,7 +74,7 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         budgetGame.getPlayer(2).setBudget(400);
         budgetGame.setPlayerTurnCount(1, budgetGame.getMaxTurns());
         budgetGame.setPlayerTurnCount(2, budgetGame.getMaxTurns());
-        int budgetWinner = budgetService.determineWinner(budgetGame);
+        int budgetWinner = budgetService.determineWinner();
 
         boolean passed = aliveWinner == 1 && hpWinner == 2 && budgetWinner == 1;
 
@@ -99,7 +99,7 @@ class GameServiceWinConditionTest extends GameServiceTestSupport {
         game.getPlayer(1).setBudget(300);
         game.getPlayer(2).setBudget(300);
 
-        int winner = service.determineWinner(game);
+        int winner = service.determineWinner();
         boolean passed = winner == 3;
 
         return new ScenarioResult(

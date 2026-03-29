@@ -11,7 +11,7 @@ import java.io.IOException;
 public class ConfigLoader {
     private Map<String, Long> config = new HashMap<>();
 
-    public ConfigLoader() { // Default constructor
+    public ConfigLoader() {
         load("config.txt");
     }
 

@@ -41,6 +41,11 @@ abstract class GameServiceTestSupport {
         ScenarioReportWriter.printTable(category, results);
         ScenarioReportWriter.writeReport(category, results);
         for (ScenarioResult result : results) {
+            // 👇 เพิ่มบรรทัดนี้เพื่อดูว่าตัวไหนพังกันแน่
+            if (!result.passed()) {
+                System.out.println("❌ TEST FAILED AT: " + result.name());
+                System.out.println("📝 DETAILS: " + result.details());
+            }
             assertTrue(result.passed(), () -> result.name() + " failed: " + result.details());
         }
     }

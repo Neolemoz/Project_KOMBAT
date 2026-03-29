@@ -326,4 +326,33 @@ public class GameService {
         Direction(String value) { this.value = value; }
         static Direction from(String raw) { return raw == null ? null : Arrays.stream(values()).filter(d -> d.value.equalsIgnoreCase(raw)).findFirst().orElse(null); }
     }
+    public void executeMinionStrategies(Long gameId) {
+        if (isGameOver()) return;
+        Player p = gameState.getPlayer(currentPlayerId);
+        if (p == null) return;
+
+        List<Minion> minions = p.getMinions().stream().filter(Objects::nonNull).collect(Collectors.toList());
+        for (Minion m : minions) {
+            if (isGameOver()) break;
+            if (isMinionActive(m)) {
+                executeStrategyNode(m.getStrategy(), new MinionContext(m, gameState), new StrategyExecutionState());
+            }
+            refreshGameStatus();
+        }
+    }
+    public int determineWinner(GameState mockGame) {
+        if (mockGame == null) return 0;
+        GameState originalGame = this.gameState;
+        this.gameState = mockGame;
+        int winner = determineWinner();
+        this.gameState = originalGame; // คืนค่ากระดานหลักกลับมา
+        return winner;
+    }
+    public boolean canEndCurrentTurn() {
+        if (gameState == null) {
+            return false;
+        }
+        // สามารถกดจบเทิร์นได้ ถ้าเกมยังไม่จบ
+        return !gameState.isGameOver();
+    }
 }

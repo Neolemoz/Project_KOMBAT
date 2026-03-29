@@ -52,7 +52,7 @@ class GameServiceEconomyTest extends GameServiceTestSupport {
         double expectedInterest = game.calculateInterest(1090, 2);
         double expectedBudget = 1090 + expectedInterest;
 
-        service.applyTurnEconomy(game);
+        service.applyTurnEconomy();
 
         boolean passed = Math.abs(p1.getBudget() - expectedBudget) < 0.000001;
 
@@ -75,7 +75,7 @@ class GameServiceEconomyTest extends GameServiceTestSupport {
         game.setPlayerTurnCount(1, 1);
         p1.setBudget(game.getMaxBudget() - 10);
 
-        service.applyTurnEconomy(game);
+        service.applyTurnEconomy();
 
         boolean passed = Math.abs(p1.getBudget() - game.getMaxBudget()) < 0.000001;
 
